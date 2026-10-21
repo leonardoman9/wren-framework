@@ -30,8 +30,35 @@ def run(r):
                      f"diagnostic build `firmware/{p.name}_diag.bin`" if fw else "not built"),
         ("firmware tests", fw.get("tests", "not run")),
     ]
-    text = f"# {p.name}\n\nMade {datetime.now(timezone.utc):%Y-%m-%d %H:%M} UTC by wren-framework.\n\n| | |\n|---|---|\n"
-    text += "".join(f"| {k} | {v} |\n" for k, v in rows)
+    text = f"# {p.name}\n\nMade {datetime.now(timezone.utc):%Y-%m-%d %H:%M} UTC by wren-framework.\n\n"
+    if p.trains:
+        prep, tr, ev = load(d / "prepare" / "prepare.json"), load(d / "train" / "train.json"), load(d / "evaluate" / "evaluate.json")
+        dev = pkg.get("device_eval", {})
+        text += "## Data and training\n\n| | |\n|---|---|\n"
+        drows = [
+            ("data", ", ".join(f"{k}: {v['files']} files, {v['windows']} windows" for k, v in prep.get("splits", {}).items())),
+            ("training", f"init {tr.get('init')}, best epoch {tr.get('best_epoch')} of {tr.get('epochs_run')}, "
+                         f"validation macro-F1 {tr.get('best', {}).get('val_macro_f1', float('nan')):.3f}, {tr.get('device')}, "
+                         f"{tr.get('seconds', 0) / 60:.1f} min"),
+            ("test (call windows, float)", f"macro-F1 {ev.get('call_windows', {}).get('macro_f1', float('nan')):.3f}, accuracy "
+                                           f"{ev.get('call_windows', {}).get('accuracy', float('nan')):.3f} on {ev.get('test_windows')} windows "
+                                           f"(chance {ev.get('chance_macro_f1', float('nan')):.3f})"),
+            ("test on the device (int8, C)", f"macro-F1 {dev.get('int8_macro_f1', float('nan')):.3f} (float {dev.get('float_macro_f1', float('nan')):.3f}) "
+                                             f"on {dev.get('windows')} windows"),
+            ("device decision per file", f"suggested confidence {ev.get('files', {}).get('suggested_confidence_pct')} %; at the configured "
+                                         f"{p.confidence} %: file macro-F1 {ev.get('files', {}).get('at_configured', {}).get('macro_f1')}, "
+                                         f"false reports/hour on background {ev.get('files', {}).get('at_configured', {}).get('false_reports_per_hour')}"),
+        ]
+        bands = prep.get("class_bands_hz", {})
+        drows.insert(1, ("windows chosen within", ", ".join(f"{c.replace('|', chr(92) + '|')} {lo}-{hi} Hz" for c, (lo, hi) in bands.items()) +
+                         ("; " if bands else "") + "other classes: the whole range"))
+        text += "".join(f"| {k} | {v} |\n" for k, v in drows)
+        if prep.get("warnings"): text += "\nWarnings from prepare:\n" + "".join(f"- {w}\n" for w in prep["warnings"][:10])
+        per = ev.get("call_windows", {}).get("per_class", {})
+        if per:
+            text += "\nPer class (test call windows): " + ", ".join(f"{c} F1 {v['f1']:.2f}" for c, v in per.items()) + "\n"
+        text += "\n## Conversion and firmware\n\n"
+    text += "| | |\n|---|---|\n" + "".join(f"| {k} | {v} |\n" for k, v in rows)
     text += ("\nFlash the `.bin` with the AudioMoth Flash App; the card needs `CONFIG.TXT` (see the firmware README). "
              "Logs of every step: `logs/`.\n")
     (d / "report.md").write_text(text)

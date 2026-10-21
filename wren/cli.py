@@ -5,15 +5,16 @@
   python -m wren run PROJECT.yaml [--stages export,package,firmware,report] [--force]
 """
 import argparse
+import json
 import shutil
 import subprocess
 import sys
 
 from wren import config
 from wren.runner import Runner, StepFailed
-from wren.stages import export, firmware, package, report
+from wren.stages import data, export, firmware, package, report
 
-STAGES = ["export", "package", "firmware", "report"]
+STAGES = ["prepare", "train", "evaluate", "export", "package", "firmware", "report"]
 
 
 def setup(args):
@@ -41,8 +42,15 @@ def run(args):
     for env, py in (("torch", p.torch_python), ("tf", p.tf_python)):
         if not py.exists(): raise SystemExit(f"{env} environment missing ({py}): run `python -m wren setup`")
     r = Runner(p)
-    print(f"{p.name}: {p.checkpoint.name}, {len(p.classes)} classes -> {p.run_dir}")
+    source = f"audio in {', '.join(p.data['sources'].values())}" if p.trains else p.checkpoint.name
+    print(f"{p.name}: {source}, {len(p.classes)} classes -> {p.run_dir}")
     try:
+        if p.trains:
+            done_key = lambda d: json.loads((d / "stage.json").read_text())["key"] if (d / "stage.json").exists() else None
+            prep, pkey = data.prepare(r, args.force) if "prepare" in stages else (p.run_dir / "prepare", done_key(p.run_dir / "prepare"))
+            tkey = data.train(r, prep, pkey, args.force)[1] if "train" in stages else done_key(p.run_dir / "train")
+            if "evaluate" in stages: data.evaluate(r, prep, tkey, args.force)
+            if not p.checkpoint.exists(): raise StepFailed(f"no trained model yet ({p.checkpoint}): run the train stage")
         exp = export.run(r, args.force) if "export" in stages else p.run_dir / "export"
         pkg = package.run(r, exp, args.force) if "package" in stages else p.run_dir / "package"
         if "firmware" in stages: firmware.run(r, pkg, args.force)
@@ -61,7 +69,7 @@ def main():
     s.set_defaults(fn=setup)
     r = sub.add_parser("run", help="run the pipeline on a project.yaml")
     r.add_argument("project")
-    r.add_argument("--stages", help="comma-separated subset of " + ",".join(STAGES))
+    r.add_argument("--stages", help="comma-separated subset of " + ",".join(STAGES) + " (prepare/train/evaluate: training projects)")
     r.add_argument("--force", action="store_true", help="rerun stages even if their inputs did not change")
     r.set_defaults(fn=run)
     a = ap.parse_args()

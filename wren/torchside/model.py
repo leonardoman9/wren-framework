@@ -30,26 +30,46 @@ def checkpoint_info(path):
     }
 
 
-def load_model(path):
-    """The trained network, in eval mode. Same hyper-parameters as the WrenNet bird model; the class count is the
-    checkpoint's."""
-    classes = checkpoint_info(path)["classes"]
+F_MIN, F_MAX = 150.0, 16000.0  # the filterbank's range (buffers, not learned), as in the bird model
+
+
+def build_model(classes, breakpoint=4000.0, transition_width=100.0):
+    """WrenNet with `classes` outputs: the architecture and hyper-parameters of the bird model (hidden size 64, 32
+    backbone channels, 64 filters). The `matchbox` keys below are not all read by WrenNet (MatchboxNetSkip uses its own
+    defaults: dropout 0.3 in its blocks, 0.05 in the PhiNet blocks); kept as in the original export script."""
     m = Improved_Phi_GRU_ATT(
         num_classes=classes, spectrogram_type="combined_log_linear", sample_rate=SR, n_mel_bins=64,
         n_linear_filters=64, hidden_dim=64, n_fft=1024, hop_length=320,
         matchbox=dict(base_filters=32, num_layers=3, kernel_size=3, dropout=0.1),
-        breakpoint=4000.0, transition_width=100.0)
+        breakpoint=breakpoint, transition_width=transition_width, f_min=F_MIN, f_max=F_MAX)
+    fb = m.combined_log_linear_spec._get_current_filter_bank(device=torch.device("cpu"))
+    if not torch.isfinite(fb).all(): raise ValueError("the filterbank of a new model is not finite")
+    return m
+
+
+def load_model(path):
+    """The trained network, in eval mode; the class count is the checkpoint's."""
+    m = build_model(checkpoint_info(path)["classes"])
     m.load_state_dict(torch.load(path, map_location="cpu"), strict=True)
     return m.eval()
 
 
+def power_to_db(power):
+    """10 log10(power) with the 80 dB floor below EACH CLIP's maximum, as the C front-end does. (torchaudio's
+    AmplitudeToDB, used inside the WrenNet model, takes one floor for the whole batch: batched results then differ
+    from one clip at a time and from the device. For one clip both are the same.)"""
+    db = 10.0 * torch.log10(torch.clamp(power, min=1e-10))
+    return torch.maximum(db, db.amax(dim=(1, 2), keepdim=True) - 80.0)
+
+
 def frontend(m, wav):
-    """The part of the model the device computes in C: STFT, learned filterbank, dB, per-clip standardisation."""
+    """The part of the model the device computes in C: STFT, learned filterbank, dB, per-clip standardisation.
+    wav: [B, 96000] (or [1, N]); returns ([B, 64, T] standardised spectrogram, filterbank)."""
     spec = m.combined_log_linear_spec
-    stft = torch.stft(wav, n_fft=1024, hop_length=320, window=torch.hann_window(1024), return_complex=True)
+    stft = torch.stft(wav, n_fft=1024, hop_length=320, window=torch.hann_window(1024, device=wav.device), return_complex=True)
     fb = spec._get_current_filter_bank(device=wav.device)
     filtered = torch.matmul(fb, stft.abs())
-    db = m.amplitude_to_db(filtered ** 2)
+    db = power_to_db(filtered ** 2)
     mean, std = db.mean(dim=(1, 2), keepdim=True), db.std(dim=(1, 2), keepdim=True) + 1e-5
     return (db - mean) / std, fb
 
@@ -68,3 +88,10 @@ class Core(nn.Module):
         x = self.projection(x)
         x, _ = self.attention(x)
         return self.fc(x)
+
+
+def device_forward(m, core, wav):
+    """What the device computes, for a batch: per-clip front-end, then the core. Same result batched or one clip at a
+    time (unlike m(wav), see power_to_db)."""
+    spec, _ = frontend(m, wav)
+    return core(spec)

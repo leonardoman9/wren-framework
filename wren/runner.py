@@ -53,6 +53,29 @@ def stage_key(*parts):
     return h.hexdigest()
 
 
+def listing(*folders):
+    """Every file under the folders with its size and modification time: a stage key that notices added, removed or
+    changed audio (hashing paths alone would not)."""
+    items = []
+    for d in folders:
+        d = Path(d)
+        if d.is_file(): items.append((str(d), d.stat().st_size, int(d.stat().st_mtime)))
+        elif d.is_dir():
+            items += sorted((str(f), f.stat().st_size, int(f.stat().st_mtime)) for f in d.rglob("*") if f.is_file())
+    return items
+
+
+def code(*names):
+    """Hash of wren's own code files, so a changed stage reruns."""
+    return [sha256(ROOT / "wren" / n) for n in names]
+
+
+def submodule_commit(name):
+    """Commit of a third_party submodule (the WrenNet architecture, the firmware): part of the keys that depend on it."""
+    import subprocess
+    return subprocess.run(["git", "-C", str(ROOT / "third_party" / name), "rev-parse", "HEAD"], capture_output=True, text=True).stdout.strip()
+
+
 def up_to_date(out_dir, key):
     f = Path(out_dir) / "stage.json"
     return f.exists() and json.loads(f.read_text()).get("key") == key

@@ -11,7 +11,7 @@ import shutil
 import subprocess
 
 from wren.config import ROOT
-from wren.runner import mark_done, need, sha256, stage_key, up_to_date
+from wren.runner import code, mark_done, need, sha256, stage_key, up_to_date
 
 
 def run(r, export_dir, force=False):
@@ -20,7 +20,9 @@ def run(r, export_dir, force=False):
     bird = fw / "firmware" / "bird"
     out = p.run_dir / "package"
     work = p.run_dir / "package_work"
-    key = stage_key("package-1", export_dir / "model.tflite", export_dir / "reference.npz", p.checkpoint, p.classes,
+    prep_state = p.run_dir / "prepare" / "stage.json"
+    key = stage_key("package-1", p.trains, p.trains and prep_state.exists() and prep_state.read_text(),
+                    p.trains and code("torchside/windows_ref.py", "tfside/device_eval.py"), export_dir / "model.tflite", export_dir / "reference.npz", p.checkpoint, p.classes,
                     p.negative, p.window_start, p.window_minutes, p.hop_seconds, p.confidence,
                     [str(a) for a in p.test_audio], p.test_windows, subprocess.run(["git", "-C", str(fw), "rev-parse", "HEAD"],
                     capture_output=True, text=True).stdout.strip())
@@ -52,8 +54,12 @@ def run(r, export_dir, force=False):
     # the device pipeline on the host vs PyTorch, and one window with its expected logits for the QEMU test
     for name, src in (("libfe", "bird_frontend.c"), ("libtail", "bird_tail.c")):
         r.run(f"{name}_build", ["cc", "-O2", "-shared", "-fPIC", f"-I{bird}", f"-I{gen}", bird / src, "-lm", "-o", work / f"{name}.so"])
-    r.torch("test_reference", "-m", "wren.torchside.run", bird / "e2e_make_ref.py", ROOT / "third_party" / "WrenNet",
-            p.checkpoint, work / "e2e_ref.npz", p.test_windows, *p.test_audio)
+    if p.trains:  # labelled test windows of the trained model
+        r.torch("test_reference", "-m", "wren.torchside.windows_ref", p.run_dir / "prepare", "test", p.checkpoint,
+                work / "e2e_ref.npz", max(p.test_windows, 2000), p.training["seed"])
+    else:
+        r.torch("test_reference", "-m", "wren.torchside.run", bird / "e2e_make_ref.py", ROOT / "third_party" / "WrenNet",
+                p.checkpoint, work / "e2e_ref.npz", p.test_windows, *p.test_audio)
     check = r.tf("pipeline_check", bird / "e2e_check.py", work / "e2e_ref.npz", out / "model.tflite", work / "libfe.so", work / "libtail.so")
     m = re.search(r"windows=(\d+) \| argmax agree=(\d+)/(\d+) \| logits max\|d\|=([\d.]+)", check)
     if not m: raise SystemExit("pipeline check: unexpected output, see logs/pipeline_check.log")
@@ -65,9 +71,17 @@ def run(r, export_dir, force=False):
 
     result = {"windows": windows, "class_agreement": agree, "logits_max_diff": float(m.group(4)),
               "model_sha256": sha256(out / "model.tflite"), "checkpoint_sha256": sha256(p.checkpoint)}
+    if p.trains:  # what int8 costs on the test windows, measured with the firmware's own C code
+        r.tf("device_eval", "-m", "wren.tfside.device_eval", work / "e2e_ref.npz", out / "model.tflite", work / "libfe.so",
+             work / "libtail.so", len(p.classes), work / "device_eval.json")
+        d = json.loads((work / "device_eval.json").read_text())
+        result["device_eval"] = d
+        print(f"  test windows: macro-F1 float {d['float_macro_f1']:.3f} -> device int8 {d['int8_macro_f1']:.3f}")
+        if d["float_macro_f1"] - d["int8_macro_f1"] > 0.05:
+            raise SystemExit(f"int8 costs {d['float_macro_f1'] - d['int8_macro_f1']:.3f} macro-F1 on the test windows (limit 0.05)")
     (out / "package.json").write_text(json.dumps(result, indent=2) + "\n")
     print(f"  device pipeline vs PyTorch: same class in {agree}/{windows} windows")
-    if agree < 0.9 * windows:
+    if not p.trains and agree < 0.9 * windows:
         raise SystemExit(f"the device pipeline disagrees with PyTorch on {windows - agree}/{windows} windows")
     mark_done(out, key, **result)
     return out

@@ -1,0 +1,12 @@
+# Smoke test of training: three synthetic tonal "species" and a noise background (tests/make_synthetic_dataset.py).
+# From scratch, so the learned filterbank parameters move and the C front-end tables are regenerated from them.
+name: test-synthetic
+data:
+  root: ../../runs/synth_data
+  negative: background
+training:
+  init: scratch
+  epochs: 20
+  lr: 1.0e-3
+calibration: {count: 100, eval: 30}
+device: {window_start: "06:00", window_minutes: 5, hop_seconds: 3, confidence: 50}
