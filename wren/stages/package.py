@@ -1,0 +1,73 @@
+"""Stage package: the model package the firmware builds from (layout: audiomoth-fw firmware/bird/model/README.md).
+
+runs/<name>/package/: model.tflite, model_config.json, generated/ (bird_frontend_tables.h, bird_tail_weights_i8.h,
+tail_dims.h, model_config.h), test/ (pipe_vec.cc, specs_one.npz: one window and its expected logits for the QEMU
+test). Every file is made by the firmware repository's own generators. The device pipeline (C front-end + int8
+backbone + C tail, built for the host) is checked against PyTorch on test windows: package.json.
+"""
+import json
+import re
+import shutil
+import subprocess
+
+from wren.config import ROOT
+from wren.runner import mark_done, need, sha256, stage_key, up_to_date
+
+
+def run(r, export_dir, force=False):
+    p = r.p
+    fw = need(p.firmware_repo, "firmware repository (git submodule update --init)")
+    bird = fw / "firmware" / "bird"
+    out = p.run_dir / "package"
+    work = p.run_dir / "package_work"
+    key = stage_key("package-1", export_dir / "model.tflite", export_dir / "reference.npz", p.checkpoint, p.classes,
+                    p.negative, p.window_start, p.window_minutes, p.hop_seconds, p.confidence,
+                    [str(a) for a in p.test_audio], p.test_windows, subprocess.run(["git", "-C", str(fw), "rev-parse", "HEAD"],
+                    capture_output=True, text=True).stdout.strip())
+    if not force and up_to_date(out, key):
+        print("package: up to date"); return out
+    print("package")
+    shutil.rmtree(out, ignore_errors=True); shutil.rmtree(work, ignore_errors=True)
+    gen, test = out / "generated", out / "test"
+    for d in (gen, test, work): d.mkdir(parents=True)
+    info = json.loads((export_dir / "info.json").read_text())
+
+    # learned filterbank -> constant tables of the C front-end
+    r.run("frontend_tables_build", ["cc", "-O2", fw / "tools" / "gen_frontend_tables.c", "-lm", "-o", work / "gen_frontend_tables"])
+    tables = r.run("frontend_tables", [work / "gen_frontend_tables", repr(info["breakpoint"]), repr(info["transition_width"]),
+                                       repr(info["f_min"]), repr(info["f_max"])])
+    (gen / "bird_frontend_tables.h").write_text(tables)
+
+    # GRU, projection, attention and classifier weights (int8 per row) and the frame count
+    r.torch("tail_weights", "-m", "wren.torchside.run", bird / "gen_bird_tail.py", ROOT / "third_party" / "WrenNet",
+            p.checkpoint, export_dir / "reference.npz", work / "tail")
+    for f in ("bird_tail_weights_i8.h", "tail_dims.h"): shutil.copy(work / "tail" / f, gen / f)
+
+    # backbone, classes and device settings
+    shutil.copy(export_dir / "model.tflite", out / "model.tflite")
+    r.run("model_config", ["python3", bird / "gen_model_config.py", out, "--names", ",".join(p.classes), "--negative", p.negative,
+                           "--window-start", p.window_start, "--window-minutes", p.window_minutes,
+                           "--hop-seconds", p.hop_seconds, "--confidence", p.confidence])
+
+    # the device pipeline on the host vs PyTorch, and one window with its expected logits for the QEMU test
+    for name, src in (("libfe", "bird_frontend.c"), ("libtail", "bird_tail.c")):
+        r.run(f"{name}_build", ["cc", "-O2", "-shared", "-fPIC", f"-I{bird}", f"-I{gen}", bird / src, "-lm", "-o", work / f"{name}.so"])
+    r.torch("test_reference", "-m", "wren.torchside.run", bird / "e2e_make_ref.py", ROOT / "third_party" / "WrenNet",
+            p.checkpoint, work / "e2e_ref.npz", p.test_windows, *p.test_audio)
+    check = r.tf("pipeline_check", bird / "e2e_check.py", work / "e2e_ref.npz", out / "model.tflite", work / "libfe.so", work / "libtail.so")
+    m = re.search(r"windows=(\d+) \| argmax agree=(\d+)/(\d+) \| logits max\|d\|=([\d.]+)", check)
+    if not m: raise SystemExit("pipeline check: unexpected output, see logs/pipeline_check.log")
+    windows, agree = int(m.group(1)), int(m.group(2))
+    r.tf("test_vectors", bird / "gen_pipeline_vec.py", work / "e2e_ref.npz", 0, out / "model.tflite", work / "libfe.so",
+         work / "libtail.so", test / "pipe_vec.cc")
+    r.tf("test_spec", "-c", "import numpy as np, sys; np.savez_compressed(sys.argv[2], eval=np.load(sys.argv[1])['eval'][:1])",
+         export_dir / "specs.npz", test / "specs_one.npz")
+
+    result = {"windows": windows, "class_agreement": agree, "logits_max_diff": float(m.group(4)),
+              "model_sha256": sha256(out / "model.tflite"), "checkpoint_sha256": sha256(p.checkpoint)}
+    (out / "package.json").write_text(json.dumps(result, indent=2) + "\n")
+    print(f"  device pipeline vs PyTorch: same class in {agree}/{windows} windows")
+    if agree < 0.9 * windows:
+        raise SystemExit(f"the device pipeline disagrees with PyTorch on {windows - agree}/{windows} windows")
+    mark_done(out, key, **result)
+    return out

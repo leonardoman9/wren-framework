@@ -1,0 +1,25 @@
+# The WrenNet bird model (8 species + non-bird) as shipped in audiomoth-nn-deployment/firmware/bird/model.
+# Running this project reproduces that package: tests/test_birds_reproduction.sh checks the int8 backbone byte for byte.
+name: birds
+checkpoint: ../../third_party/WrenNet/best_distillation_model.pt
+
+# names in the model's OUTPUT order (for this checkpoint: allowed_bird_classes of its training config)
+classes: [Bubo bubo, Certhia familiaris, Apus apus, Certhia brachydactyla, Emberiza cia, Lophophanes cristatus,
+          Periparus ater, Poecile montanus, non-bird]
+negative: last          # the "nothing of interest" class: index, 'last' or 'none'
+
+calibration:            # audio for the int8 calibration (first 3 s of each file, shuffled with a fixed seed)
+  audio:
+    - /Users/leonardomannini/Progetti/BioDCASE/2026/biodcase_model/BioDCASE2026_TinyML_Development_Dataset/Train
+    - /Users/leonardomannini/Downloads/Accipiter_gentilis/Acipiter_gentilis_m_Poland_Jarek_Matusiak_20100328.mp3
+  count: 300
+  eval: 100
+
+test:                   # windows on which the device pipeline is compared with PyTorch
+  windows: 120
+
+device:
+  window_start: "07:00"
+  window_minutes: 5
+  hop_seconds: 3
+  confidence: 50

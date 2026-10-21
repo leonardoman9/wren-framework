@@ -1,0 +1,17 @@
+# Test project: a 4-class checkpoint made by tests/make_test_checkpoint.py (meaningless predictions), another window
+# and a 1.5 s hop. Every stage must run and the firmware must pass its tests: the pipeline is not tied to the bird model.
+name: test-4-classes
+checkpoint: ../../runs/test_checkpoint_4.pt
+classes: [frog, toad, cricket, background]
+negative: last
+calibration:
+  audio: [/Users/leonardomannini/Progetti/BioDCASE/2026/biodcase_model/BioDCASE2026_TinyML_Development_Dataset/Train]
+  count: 100
+  eval: 50
+test:
+  windows: 40
+device:
+  window_start: "21:30"
+  window_minutes: 10
+  hop_seconds: 1.5
+  confidence: 60
