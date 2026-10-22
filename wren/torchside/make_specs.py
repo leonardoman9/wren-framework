@@ -1,4 +1,4 @@
-# Copied from WrenNet tools/bird_make_specs.py (not published in the WrenNet repository); + *.flac. Run through
+# Copied from WrenNet tools/bird_make_specs.py (not published in the WrenNet repository); + *.flac, float64. Run through
 # wren/torchside/run.py, which gives it the general model loader (any number of classes).
 """Standardised dB spectrograms ([301, 64], time-major) from audio files, for calibration
 and evaluation of the int8 backbone. Takes the first 3 s of every file.
@@ -23,7 +23,8 @@ for arg in sys.argv[5:]:
     p = Path(arg)
     files += sorted(p.rglob("*.wav")) + sorted(p.rglob("*.mp3")) + sorted(p.rglob("*.flac")) if p.is_dir() else [p]
 random.Random(0).shuffle(files)
-m = load_model(ckpt)
+# float64, rounded once to float32: MKL's last bits differ between CPUs, and they vanish in the rounding
+m = load_model(ckpt).double()
 specs, names = [], []
 for path in files:
     if len(specs) >= n_cal + n_eval: break
@@ -34,7 +35,7 @@ for path in files:
     wav = torchaudio.functional.resample(torch.from_numpy(data.T.copy()).mean(0, keepdim=True), sr, SR)
     wav = torch.nn.functional.pad(wav, (0, max(0, 96000 - wav.shape[1])))[:, :96000]
     with torch.no_grad():
-        spec, _ = frontend(m, wav)
+        spec, _ = frontend(m, wav.double())
     specs.append(spec[0].T.numpy().astype(np.float32))  # [301, 64]
     names.append(str(path))
 specs = np.stack(specs)

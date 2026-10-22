@@ -17,7 +17,8 @@ from wren.torchside.model import frontend, load_model
 WIN, SR = 96000, 32000
 prep, ckpt, out = Path(sys.argv[1]), Path(sys.argv[2]), Path(sys.argv[3])
 n_cal, n_eval, seed, hop = int(sys.argv[4]), int(sys.argv[5]), int(sys.argv[6]), int(round(float(sys.argv[7]) * SR))
-m = load_model(ckpt)
+# float64, rounded once to float32: MKL's last bits differ between CPUs, and they vanish in the rounding
+m = load_model(ckpt).double()
 
 
 def split(name):
@@ -30,7 +31,7 @@ def specs(items, files, audio):
     res = []
     with torch.no_grad():
         for i in range(0, len(items), 64):
-            x = np.stack([audio[files[fi]["offset"] + s: files[fi]["offset"] + s + WIN].astype(np.float32) / 32768.0 for fi, s in items[i:i + 64]])
+            x = np.stack([audio[files[fi]["offset"] + s: files[fi]["offset"] + s + WIN].astype(np.float64) / 32768.0 for fi, s in items[i:i + 64]])
             res.append(frontend(m, torch.from_numpy(x))[0].transpose(1, 2).numpy().astype(np.float32))
     return np.concatenate(res) if res else np.zeros((0, 301, 64), np.float32)
 

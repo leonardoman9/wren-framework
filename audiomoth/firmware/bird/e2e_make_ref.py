@@ -5,7 +5,8 @@ import numpy as np, soundfile, torch, torchaudio
 root, ckpt, out, n = Path(sys.argv[1]), Path(sys.argv[2]), Path(sys.argv[3]), int(sys.argv[4])
 sys.path.insert(0, str(root / "tools"))
 from bird_model_export_check import SR, load_model  # noqa: E402
-m = load_model(ckpt)
+# float64, rounded once to float32: MKL's last bits differ between CPUs, and they vanish in the rounding
+m = load_model(ckpt).double()
 files = []
 for a in sys.argv[5:]:
     p = Path(a); files += (sorted(p.rglob("*.wav")) + sorted(p.rglob("*.mp3")) + sorted(p.rglob("*.flac"))) if p.is_dir() else [p]
@@ -21,7 +22,7 @@ for f in files:
         if len(pcms) >= n: break
         seg = torch.nn.functional.pad(w[:, s:s + 96000], (0, max(0, 96000 - w[:, s:s + 96000].shape[1])))
         pcm = np.clip(np.rint(seg[0].numpy() * 32768.0), -32768, 32767).astype(np.int16)
-        with torch.no_grad(): lg = m(torch.from_numpy(pcm.astype(np.float32) / 32768.0)[None])[0].numpy()
+        with torch.no_grad(): lg = m(torch.from_numpy(pcm.astype(np.float64) / 32768.0)[None])[0].numpy().astype(np.float32)
         pcms.append(pcm); logits.append(lg); names.append(f"{f.name}@{s/SR:.0f}s")
 np.savez(out, pcm=np.stack(pcms), logits=np.stack(logits), names=np.array(names))
 print("saved", len(pcms), "windows")
