@@ -1,0 +1,172 @@
+# Configuration for Knowledge Distillation Training with Preprocessed Files
+# Use this configuration when you have preprocessed audio files ready
+
+# Override experiment name
+experiment_name: "bird_classification_distillation_preprocessed"
+
+# Loss function configuration
+loss:
+  type: "distillation"          # Options: "distillation", "focal", "focal_distillation"
+  gamma: 2.0                    # Focal loss gamma parameter (only used for focal loss types)
+  class_weights: null           # Options: null, "auto", or list of per-class weights
+  alpha_scaling: 1.0            # Scaling factor for automatic class weights
+
+# Distillation-specific parameters
+distillation:
+  # Distillation loss parameters
+  alpha: 0.4                   # Weight for soft labels (0-1, 0=only hard labels, 1=only soft labels)
+  temperature: 3.0              # Temperature scaling for softmax (higher=softer distributions)
+  adaptive: true               # Whether to use adaptive alpha based on validation performance
+  adaptation_rate: 0.1          # Rate of alpha adaptation (if adaptive=true)
+  
+  # Alpha scheduling (if not adaptive)
+  alpha_schedule: "constant"    # Options: "constant", "linear_increase", "cosine"
+  
+  # Confidence threshold used during soft label extraction
+  confidence_threshold: 0.05    # Must match the threshold used in extract_soft_labels.py
+
+# Training parameters (can use larger batch sizes with preprocessed files)
+training:
+  epochs: 50                   
+  batch_size: 128              # Larger batch size since no preprocessing overhead
+  patience: 20                 
+  min_delta: 0.001             
+  seed: 42
+
+# Model parameters (keep student model lightweight)
+model:
+  spectrogram_type: "combined_log_linear"  # Use the best performing architecture
+  hidden_dim: 64
+  n_mel_bins: 64
+  n_linear_filters: 64
+  trainable_filterbank: true
+  initial_breakpoint: 4000.0
+  initial_transition_width: 100.0
+  n_fft: 1024
+  hop_length: 320
+  matchbox:
+    base_filters: 32
+    num_layers: 3
+    kernel_size: 3
+    dropout: 0.1
+
+# Optimizer 
+optimizer:
+  _target_: torch.optim.AdamW
+  lr: 0.001                    
+  weight_decay: 0.01
+
+# Learning rate scheduler (for main model)
+scheduler:
+  _target_: torch.optim.lr_scheduler.ReduceLROnPlateau
+  mode: 'min'                   
+  factor: 0.5
+  patience: 5
+  min_lr: 1e-6
+
+# Filter scheduler (separate scheduler for filter parameters)
+# Using CosineAnnealingLR for filters with separate schedule
+filter_scheduler:
+  _target_: torch.optim.lr_scheduler.CosineAnnealingLR
+  T_max: 50                      # Separate annealing schedule for filters
+  eta_min: 5e-7                  # Minimum learning rate for filters
+# Alternative: Set to null to disable scheduler for filters (constant LR)
+# filter_scheduler: null
+
+# Dataset parameters for PREPROCESSED FILES
+dataset:
+  soft_labels_path: "test_soft_labels"  # Path to soft labels (can be overridden)
+  
+  # PREPROCESSED FILES CONFIGURATION
+  process: false                        # Use preprocessed files (no runtime preprocessing)
+  preprocessed_root_dir: "bird_sound_dataset_processed"  # Directory with preprocessed files
+  
+  # Classes to match the teacher model's output
+  allowed_bird_classes:
+    - "Accipiter_gentilis"
+    - "Aegithalos_caudatus"
+    - "Aegolius_funereus"
+    - "Apus_apus"
+    - "Ardea_cinerea"
+    - "Asio_otus"
+    - "Athene_noctua"
+    - "Bubo_bubo"
+    - "Buteo_buteo"
+    - "Caprimulgus_europaeus"
+    - "Carduelis_carduelis"
+    - "Certhia_brachydactyla"
+    - "Certhia_familiaris"
+    - "Chloris_chloris"
+    - "Coccothraustes_coccothraustes"
+    - "Columba_palumbus"
+    - "Corvus_corax"
+    - "Cuculus_canorus"
+    - "Curruca_communis"
+    - "Cyanistes_caeruleus"
+    - "Delichon_urbicum"
+    - "Dendrocopos_major"
+    - "Dryobates_minor"
+    - "Dryocopus_martius"
+    - "Emberiza_cia"
+    - "Emberiza_cirlus"
+    - "Erithacus_rubecula"
+    - "Falco_tinnunculus"
+    - "Ficedula_hypoleuca"
+    - "Fringilla_coelebs"
+    - "Garrulus_glandarius"
+    - "Hirundo_rustica"
+    - "Jynx_torquilla"
+    - "Lanius_collurio"
+    - "Lophophanes_cristatus"
+    - "Milvus_milvus"
+    - "Motacilla_alba"
+    - "Motacilla_cinerea"
+    - "Muscicapa_striata"
+    - "Oriolus_oriolus"
+    - "Otus_scops"
+    - "Parus_major"
+    - "Passer_montanus"
+    - "Periparus_ater"
+    - "Pernis_apivorus"
+    - "Phoenicurus_ochruros"
+    - "Phoenicurus_phoenicurus"
+    - "Phylloscopus_bonelli"
+    - "Phylloscopus_collybita"
+    - "Phylloscopus_sibilatrix"
+    - "Picus_canus"
+    - "Picus_viridis"
+    - "Poecile_montanus"
+    - "Poecile_palustris"
+    - "Prunella_modularis"
+    - "Pyrrhula_pyrrhula"
+    - "Regulus_ignicapilla"
+    - "Regulus_regulus"
+    - "Serinus_serinus"
+    - "Sitta_europaea"
+    - "Spinus_spinus"
+    - "Strix_aluco"
+    - "Sturnus_vulgaris"
+    - "Sylvia_atricapilla"
+    - "Troglodytes_troglodytes"
+    - "Turdus_merula"
+    - "Turdus_philomelos"
+    - "Turdus_pilaris"
+    - "Turdus_viscivorus"
+    - "Upupa_epops"
+    # "non-bird" is added automatically
+  
+  # Dataset splits
+  validation_split: 0.15
+  test_split: 0.15
+  split_seed: 42
+  
+  # Dataloader parameters (can use more workers since no heavy preprocessing)
+  batch_size: 128
+  num_workers: 8               # More workers since preprocessing is done
+
+# Logging and checkpointing
+hydra:
+  run:
+    dir: ./logs/${experiment_name}/${now:%Y-%m-%d_%H-%M-%S}
+  job:
+    name: ${experiment_name} 

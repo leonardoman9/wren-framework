@@ -2,7 +2,7 @@
 
 The architecture is fixed (WrenNet: 32 kHz, 3 s, STFT 1024/320, 64 learned log-linear filters, PhiNet/MatchboxNet
 backbone, GRU 64, attention); the number of classes and the learned filterbank parameters come from the checkpoint.
-The architecture code is WrenNet's own (third_party/WrenNet, or WRENNET_ROOT).
+The architecture code is WrenNet's own (wrennet/, or WRENNET_ROOT).
 """
 import os
 import sys
@@ -11,7 +11,7 @@ from pathlib import Path
 import torch
 import torch.nn as nn
 
-WRENNET_ROOT = Path(os.environ.get("WRENNET_ROOT") or Path(__file__).resolve().parents[2] / "third_party" / "WrenNet")
+WRENNET_ROOT = Path(os.environ.get("WRENNET_ROOT") or Path(__file__).resolve().parents[2] / "wrennet")
 sys.path.insert(0, str(WRENNET_ROOT))
 from birds_distillation_edge.models import Improved_Phi_GRU_ATT  # noqa: E402
 

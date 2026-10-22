@@ -3,3 +3,5 @@ runs/
 __pycache__/
 *.pyc
 .DS_Store
+audiomoth/third_party/tflite-micro/
+.pytest_cache/

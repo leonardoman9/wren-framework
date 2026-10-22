@@ -7,7 +7,7 @@ model.tflite (the int8 backbone) and quantize.json (int8 vs float error, operato
 import json
 
 from wren.config import ROOT
-from wren.runner import code, mark_done, need, stage_key, up_to_date
+from wren.runner import code, content, mark_done, need, stage_key, up_to_date
 
 T = ROOT / "wren" / "torchside"
 
@@ -15,18 +15,28 @@ T = ROOT / "wren" / "torchside"
 def audio_files(paths):
     files = []
     for p in paths:
-        files += sorted(p.rglob("*.wav")) + sorted(p.rglob("*.mp3")) if p.is_dir() else [p]
+        files += sorted(p.rglob("*.wav")) + sorted(p.rglob("*.mp3")) + sorted(p.rglob("*.flac")) if p.is_dir() else [p]
     return files
 
 
+def input_key(p):
+    """Everything the export depends on, by content: the checkpoint, the calibration and reference audio, the
+    settings and the conversion code (constitution: a stage is skipped only when its inputs did not change)."""
+    prep = p.run_dir / "prepare"
+    return stage_key("export-3", p.checkpoint, content(*p.calibration_audio), p.calibration_count, p.eval_count,
+                     content(p.reference_audio), p.trains and (prep / "stage.json").read_text(), p.trains and p.hop_seconds,
+                     code("stages/export.py", "runner.py", "torchside/export_backbone.py", "torchside/make_specs.py",
+                          "torchside/specs_from_windows.py", "torchside/reference.py", "torchside/run.py",
+                          "torchside/bird_model_export_check.py", "torchside/model.py", "tfside/quantize.py"))
+
+
 def run(r, force=False):
+    r.pinned = True  # byte-identical on every x86 computer (runner.PINNED)
     p = r.p
     out = p.run_dir / "export"
     out.mkdir(parents=True, exist_ok=True)
     prep = p.run_dir / "prepare"
-    key = stage_key("export-1", p.checkpoint, [str(a) for a in p.calibration_audio], p.calibration_count, p.eval_count,
-                    str(p.reference_audio), p.trains and (prep / "stage.json").read_text(), p.trains and p.hop_seconds,
-                    p.trains and code("torchside/specs_from_windows.py"))
+    key = input_key(p)
     if not force and up_to_date(out, key):
         print("export: up to date"); return out
     print("export")

@@ -1,0 +1,135 @@
+# The pipeline end to end on every push and PR (specs/001-reproducible-from-zero, contracts/ci-workflow.md):
+#   docker        the byte-reproducible reference path: unit checks, synthetic end to end, bird reproduction
+#   native-linux  `python -m wren setup` on Linux x86_64: parity checks and quality gates, not bytes
+#   native-macos  the same on macOS arm64
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  docker:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - name: Free disk space (the image and its build cache need ~20 GB; the runner has ~14 GB free)
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          sudo docker image prune --all --force
+          df -h /
+          grep -m1 "model name" /proc/cpuinfo; grep -o -w -E "avx512f|avx2|fma" /proc/cpuinfo | sort -u | tr "\n" " "
+      - uses: docker/setup-buildx-action@v3
+      - name: Build the image (same Dockerfile as users)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/Dockerfile
+          platforms: linux/amd64
+          load: true
+          tags: wren
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: WREN_IMAGE_ID=${{ github.sha }}
+      - name: Unit checks
+        run: >
+          docker run --rm --entrypoint sh wren -c
+          ".venv-torch/bin/python tests/test_training.py && .venv-torch/bin/python -m pytest -q tests/test_setup.py tests/test_examples.py tests/test_stage_keys.py"
+      - name: Synthetic end to end
+        run: >
+          docker run --rm -v "$PWD/runs:/wren/runs" --entrypoint sh wren -c
+          ".venv-torch/bin/python tests/make_synthetic_dataset.py runs/synth_data && .venv-torch/bin/python -m wren run tests/synthetic/project.yaml"
+      - name: Bird model reproduction (byte for byte, package and firmware)
+        run: docker run --rm -v "$PWD/runs:/wren/runs" --entrypoint sh wren tests/test_birds_reproduction.sh
+      - name: Bird conversion intermediates (to locate a byte difference between hosts)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: birds-intermediates
+          path: |
+            runs/birds/export/specs.npz
+            runs/birds/export/reference.npz
+            runs/birds/export/quantize.json
+            runs/birds/export/tf/backbone_sim_float32.tflite
+            runs/birds/export/backbone_sim.onnx
+            runs/birds/export/backbone.onnx
+            runs/birds/export/model.tflite
+            runs/birds/package_work/e2e_ref.npz
+            runs/birds/package/test/pipe_vec.cc
+            runs/birds/firmware/birds.bin
+      - name: Logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: logs-docker
+          path: runs/**/logs
+
+  native-linux:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      WREN_MIN_DISK_GB: "5"  # CI runners only (envs/README.md); the measured need is ~4 GB
+    steps:
+      - uses: actions/checkout@v4
+      - name: System programs
+        run: sudo apt-get update && sudo apt-get install -y git make gcc clang wget mtools qemu-system-arm  # with recommends: the clang sanitizer runtimes
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: pip-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('envs/lock/**') }}
+      - uses: actions/cache@v4
+        with:
+          path: audiomoth/third_party/tflite-micro
+          key: tflm-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('audiomoth/scripts/setup_tflm.sh', 'audiomoth/scripts/build_tflm.sh', 'audiomoth/firmware/patches/**') }}
+      - run: df -h .
+      - run: python -m wren setup --tflm
+      - run: python -m wren setup --check --verbose
+      - name: Synthetic end to end
+        run: .venv-torch/bin/python tests/make_synthetic_dataset.py runs/synth_data && python -m wren run tests/synthetic/project.yaml
+      - name: Logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: logs-native-linux
+          path: |
+            runs/**/logs
+            runs/_setup/logs
+
+  native-macos:
+    runs-on: macos-14
+    timeout-minutes: 60
+    env:
+      WREN_MIN_DISK_GB: "5"
+    steps:
+      - uses: actions/checkout@v4
+      - name: System programs
+        run: brew install make wget mtools qemu
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - uses: actions/cache@v4
+        with:
+          path: ~/Library/Caches/pip
+          key: pip-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('envs/lock/**') }}
+      - uses: actions/cache@v4
+        with:
+          path: audiomoth/third_party/tflite-micro
+          key: tflm-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('audiomoth/scripts/setup_tflm.sh', 'audiomoth/scripts/build_tflm.sh', 'audiomoth/firmware/patches/**') }}
+      - run: df -h .
+      - run: python -m wren setup --tflm
+      - run: python -m wren setup --check --verbose
+      - name: Synthetic end to end
+        run: .venv-torch/bin/python tests/make_synthetic_dataset.py runs/synth_data && python -m wren run tests/synthetic/project.yaml
+      - name: Logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: logs-native-macos
+          path: |
+            runs/**/logs
+            runs/_setup/logs

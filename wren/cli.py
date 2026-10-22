@@ -1,46 +1,43 @@
-"""wren: from a trained WrenNet checkpoint to AudioMoth firmware.
+"""wren: from audio folders or a trained WrenNet checkpoint to AudioMoth firmware.
 
-  python -m wren setup [--tflm]          the two Python environments (torch, TensorFlow) and, with --tflm, TFLM for the
-                                         firmware (fetched at the verified commit and built; ~10 minutes the first time)
+  python -m wren setup [--tflm] [--check [--verbose]] [--python PATH]
+                                         the two Python environments (torch, TensorFlow) and, with --tflm, the firmware
+                                         build tools (~10 minutes the first time); --check only reports what is ready
   python -m wren run PROJECT.yaml [--stages export,package,firmware,report] [--force]
+
+Only the standard library is imported here: `setup` must work on a bare Python before anything is installed.
 """
 import argparse
 import json
-import shutil
-import subprocess
+import os
 import sys
-
-from wren import config
-from wren.runner import Runner, StepFailed
-from wren.stages import data, export, firmware, package, report
 
 STAGES = ["prepare", "train", "evaluate", "export", "package", "firmware", "report"]
 
 
 def setup(args):
-    py = args.python or shutil.which("python3.11")
-    if not py: raise SystemExit("Python 3.11 is needed for the environments (pass --python PATH)")
-    for name in ("torch", "tf"):
-        venv = config.ROOT / f".venv-{name}"
-        if not (venv / "bin" / "python").exists():
-            print(f"creating {venv}")
-            subprocess.run([py, "-m", "venv", str(venv)], check=True)
-        subprocess.run([str(venv / "bin" / "python"), "-m", "pip", "install", "-q", "-r",
-                        str(config.ROOT / "envs" / f"requirements-{name}.txt")], check=True)
-    if args.tflm:
-        fw = config.ROOT / "third_party" / "audiomoth-fw"
-        subprocess.run(["sh", str(fw / "scripts" / "setup_tflm.sh")], check=True)
-        subprocess.run(["sh", str(fw / "scripts" / "build_tflm.sh")], check=True, env={**__import__("os").environ, "HOST": "1"})
-    print("ready")
+    from wren import setup as wren_setup
+    sys.exit(wren_setup.main(tflm=args.tflm, check=args.check, verbose=args.verbose, python=args.python))
 
 
 def run(args):
+    try:
+        import yaml  # noqa: F401  (present in the environments, not necessarily in the Python that was typed)
+    except ImportError:
+        from wren.setup import ROOT
+        venv_python = ROOT / ".venv-torch" / "bin" / "python"
+        if not venv_python.exists(): raise SystemExit("Not installed yet: run `python -m wren setup --tflm` first.")
+        os.execv(venv_python, [str(venv_python), "-m", "wren", *sys.argv[1:]])
+    from wren import config
+    from wren.runner import Runner, StepFailed
+    from wren.stages import data, export, firmware, package, report
+
     p = config.load(args.project)
     stages = args.stages.split(",") if args.stages else STAGES
     bad = [s for s in stages if s not in STAGES]
     if bad: raise SystemExit(f"unknown stages {bad}; stages: {STAGES}")
     for env, py in (("torch", p.torch_python), ("tf", p.tf_python)):
-        if not py.exists(): raise SystemExit(f"{env} environment missing ({py}): run `python -m wren setup`")
+        if not py.exists(): raise SystemExit("Not installed yet: run `python -m wren setup --tflm` first.")
     r = Runner(p)
     source = f"audio in {', '.join(p.data['sources'].values())}" if p.trains else p.checkpoint.name
     print(f"{p.name}: {source}, {len(p.classes)} classes -> {p.run_dir}")
@@ -63,8 +60,10 @@ def run(args):
 def main():
     ap = argparse.ArgumentParser(prog="wren", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest="cmd", required=True)
-    s = sub.add_parser("setup", help="create the environments")
-    s.add_argument("--tflm", action="store_true", help="also fetch and build TFLM for the firmware")
+    s = sub.add_parser("setup", help="install what the pipeline needs, or check it (--check)")
+    s.add_argument("--tflm", action="store_true", help="also fetch and build the firmware build tools (TFLM, compiler)")
+    s.add_argument("--check", action="store_true", help="change nothing; report what is ready and what is missing")
+    s.add_argument("--verbose", action="store_true", help="with --check: also show component names and versions")
     s.add_argument("--python", help="Python 3.11 interpreter for the environments")
     s.set_defaults(fn=setup)
     r = sub.add_parser("run", help="run the pipeline on a project.yaml")

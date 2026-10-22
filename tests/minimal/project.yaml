@@ -1,0 +1,6 @@
+# The smallest training project (spec User Story 4, scenario 2): only the audio folder and the "nothing of interest"
+# class; everything else takes its documented default, and the project is named after this folder (runs/minimal).
+# Data: python tests/make_synthetic_dataset.py runs/synth_data
+data:
+  root: ../../runs/synth_data
+  negative: background

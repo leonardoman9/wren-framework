@@ -1,0 +1,27 @@
+# Local patch (wren-framework): sort the object lists, so the library's members (and so the firmware's layout) do
+# not depend on the order a filesystem lists files in: the firmware must be the same bytes on every computer.
+diff --git a/tensorflow/lite/micro/tools/make/Makefile b/tensorflow/lite/micro/tools/make/Makefile
+index cf6a13bf..4de729a5 100644
+--- a/tensorflow/lite/micro/tools/make/Makefile
++++ b/tensorflow/lite/micro/tools/make/Makefile
+@@ -482,16 +482,16 @@ INCLUDES += -I$(GENERATED_SRCS_DIR)$(TENSORFLOW_ROOT)
+ include $(MAKEFILE_DIR)/tests.inc
+ 
+ MICROLITE_LIB_OBJS := $(addprefix $(CORE_OBJDIR), \
+-$(patsubst %.S,%.o,$(patsubst %.cc,%.o,$(patsubst %.c,%.o,$(MICROLITE_CC_SRCS)))))
++$(patsubst %.S,%.o,$(patsubst %.cc,%.o,$(patsubst %.c,%.o,$(sort $(MICROLITE_CC_SRCS))))))
+ 
+ MICROLITE_THIRD_PARTY_OBJS := $(addprefix $(THIRD_PARTY_OBJDIR), \
+-$(patsubst %.S,%.o,$(patsubst %.cc,%.o,$(patsubst %.c,%.o,$(THIRD_PARTY_CC_SRCS)))))
++$(patsubst %.S,%.o,$(patsubst %.cc,%.o,$(patsubst %.c,%.o,$(sort $(THIRD_PARTY_CC_SRCS))))))
+ 
+ MICROLITE_THIRD_PARTY_KERNEL_OBJS := $(addprefix $(THIRD_PARTY_KERNEL_OBJDIR), \
+-$(patsubst %.S,%.o,$(patsubst %.cc,%.o,$(patsubst %.c,%.o,$(THIRD_PARTY_KERNEL_CC_SRCS)))))
++$(patsubst %.S,%.o,$(patsubst %.cc,%.o,$(patsubst %.c,%.o,$(sort $(THIRD_PARTY_KERNEL_CC_SRCS))))))
+ 
+ MICROLITE_KERNEL_OBJS := $(addprefix $(KERNEL_OBJDIR), \
+-$(patsubst %.S,%.o,$(patsubst %.cc,%.o,$(patsubst %.c,%.o,$(MICROLITE_CC_KERNEL_SRCS)))))
++$(patsubst %.S,%.o,$(patsubst %.cc,%.o,$(patsubst %.c,%.o,$(sort $(MICROLITE_CC_KERNEL_SRCS))))))
+ 
+ $(GENERATED_SRCS_DIR)%_model_data.cc $(GENERATED_SRCS_DIR)%_model_data.h: %.tflite
+ 	$(Q)python3 $(TENSORFLOW_ROOT)tensorflow/lite/micro/tools/generate_cc_arrays.py $(GENERATED_SRCS_DIR) $< > /dev/null
