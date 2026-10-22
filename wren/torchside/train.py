@@ -42,9 +42,20 @@ K = len(classes)
 seed = int(spec["seed"])
 torch.manual_seed(seed)
 rng = np.random.default_rng(seed)
+def usable(name):
+    """A GPU that is reported but cannot allocate (virtual machines, e.g. CI's macOS runners) is not usable."""
+    try:
+        torch.ones(1024, device=name).sum().item()
+        return True
+    except RuntimeError as e:
+        print(f"note: {name} is reported but does not work ({str(e).splitlines()[0]}); training on the cpu")
+        return False
+
+
 dev = spec["device"]
 if dev == "auto":
-    dev = "cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu"
+    dev = next((d for d, ok in (("cuda", torch.cuda.is_available()), ("mps", torch.backends.mps.is_available()))
+                if ok and usable(d)), "cpu")
 device = torch.device(dev)
 if dev == "cpu":
     torch.use_deterministic_algorithms(True)
