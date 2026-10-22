@@ -16,6 +16,19 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from bird_model_export_check import load_model  # noqa: E402
 
 
+class Affine(nn.Module):
+    """A batch norm whose scale and shift were computed in float64 (exported as Mul and Add with fixed constants)."""
+
+    def __init__(self, scale, shift):
+        super().__init__()
+        self.register_buffer("scale", scale)
+        self.register_buffer("shift", shift)
+
+    def forward(self, x):
+        shape = (1, -1) + (1,) * (x.dim() - 2)
+        return x * self.scale.reshape(shape) + self.shift.reshape(shape)
+
+
 def fold_batchnorm(module, x):
     """Folds BatchNorm1d layers into the convolution before them, in float64 with NumPy, rounded to float32. Left to the
     ONNX exporter, the folding runs through MKL, whose results differ in the last bit between CPUs (Intel, AMD,
@@ -49,6 +62,14 @@ def fold_batchnorm(module, x):
                     setattr(parent, name, bn)
                     continue
             folded += 1
+    # the rest (after residual sums) become Affine: TensorFlow would compute their 1/sqrt with an approximate
+    # instruction that differs between Intel and AMD
+    for parent in list(module.modules()):
+        for name, bn in list(parent.named_children()):
+            if isinstance(bn, nn.BatchNorm1d):
+                scale = f64(bn.weight) / np.sqrt(f64(bn.running_var) + bn.eps)
+                shift = f64(bn.bias) - f64(bn.running_mean) * scale
+                setattr(parent, name, Affine(torch.from_numpy(scale.astype(np.float32)), torch.from_numpy(shift.astype(np.float32))))
     return folded
 
 
