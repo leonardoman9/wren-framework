@@ -6,7 +6,9 @@ data:
   negative: background
 training:
   init: scratch
-  epochs: 20
+  epochs: 20               # early stopping ends it at epoch ~15 (best 7). Measured 2026-10-22: training 0.7 min (Mac,
+                            # mps) / 2.7 min (Docker, CPU); the whole run 8.6 / ~9 min, most of it the firmware tests,
+                            # so fewer epochs would not save CI time and would risk the quality gate
   lr: 1.0e-3
 calibration: {count: 100, eval: 30}
 device: {window_start: "06:00", window_minutes: 5, hop_seconds: 3, confidence: 50}

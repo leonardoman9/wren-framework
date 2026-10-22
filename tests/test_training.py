@@ -1,5 +1,5 @@
-"""Unit checks of the training side (docs/PLAN_STEP3.md, verification 1). Run with the torch environment:
-  .venv-torch/bin/python tests/test_step3.py
+"""Unit checks of the training side (prepare, model, windows, error paths). Run with the torch environment:
+  .venv-torch/bin/python tests/test_training.py
 Prints PASS/FAIL per check; exits 1 if any failed. Needs no data beyond what it makes in a temporary folder."""
 import json
 import shutil
@@ -52,7 +52,7 @@ def prepare(root, spec_extra, out, expect_ok=True):
 tmp = Path(tempfile.mkdtemp(prefix="wren_test_"))
 try:
     # --- model ---------------------------------------------------------------------------------------------------
-    m = load_model(ROOT / "third_party/WrenNet/best_distillation_model.pt"); core = Core(m).eval()
+    m = load_model(ROOT / "wrennet/best_distillation_model.pt"); core = Core(m).eval()
     rng = np.random.default_rng(0)
     x = torch.from_numpy(np.stack([tone(3, [0.5], level=l, seed=i) for i, l in enumerate([0.001, 0.05, 0.3, 0.9])]))
     with torch.no_grad():
