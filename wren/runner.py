@@ -34,7 +34,8 @@ LABELS = {
 # one fixed code path: their fastest kernels are chosen from the CPU at run time (AVX-512, AVX2, emulated AVX2 on
 # Apple silicon...) and from the thread count, and sum in different orders. Training is not pinned: it is judged by
 # the quality gates, not by bytes (constitution V).
-PINNED = {"ATEN_CPU_CAPABILITY": "default", "MKL_CBWR": "COMPATIBLE", "ONEDNN_MAX_CPU_ISA": "SSE41",
+PINNED = {"ATEN_CPU_CAPABILITY": "default", "MKL_CBWR": "COMPATIBLE,STRICT", "MKL_ENABLE_INSTRUCTIONS": "SSE4_2",
+          "ONEDNN_MAX_CPU_ISA": "SSE41",
           "DNNL_MAX_CPU_ISA": "SSE41", "TF_ENABLE_ONEDNN_OPTS": "0", "OMP_NUM_THREADS": "1", "MKL_NUM_THREADS": "1",
           "OPENBLAS_NUM_THREADS": "1", "TF_NUM_INTRAOP_THREADS": "1", "TF_NUM_INTEROP_THREADS": "1"}
 
