@@ -15,7 +15,7 @@ T = ROOT / "wren" / "torchside"
 def audio_files(paths):
     files = []
     for p in paths:
-        files += sorted(p.rglob("*.wav")) + sorted(p.rglob("*.mp3")) if p.is_dir() else [p]
+        files += sorted(p.rglob("*.wav")) + sorted(p.rglob("*.mp3")) + sorted(p.rglob("*.flac")) if p.is_dir() else [p]
     return files
 
 

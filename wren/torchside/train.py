@@ -5,7 +5,7 @@ SPEC.json: classes, negative, init (wrennet|scratch), wrennet_checkpoint, epochs
 (ce|focal), focal_gamma, augment, seed, device (auto|cpu|mps|cuda), patience, warmup_epochs.
 Outputs: best.pt (plain state_dict, loads with wren.torchside.model.load_model), history.csv, train.json.
 
-Choices (docs/PLAN_STEP3.md):
+Choices (README.md, project.yaml → training):
 - per-clip front-end (device_forward), so a batch gives what the device computes one window at a time;
 - init wrennet: every weight of the bird model but the classifier; the learned filterbank parameters stay frozen
   (the C tables are the bird model's); the first warmup_epochs train the classifier only;

@@ -1,5 +1,6 @@
 """project.yaml: what to convert (a checkpoint) or train (audio folders), and how the device should use it.
-Relative paths are relative to the yaml file. Checks that need no model run here, so mistakes cost seconds."""
+Relative paths are relative to the yaml file; without 'name', the project is named after its folder. Checks that need
+no model run here, so mistakes cost seconds."""
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -16,7 +17,7 @@ class Project:
     checkpoint: Path                # given (convert) or runs/<name>/train/best.pt (train)
     classes: list                   # display names, in the model's output order
     negative: str = "last"
-    data: dict = None               # training projects: sources, negative folder, split, windows (see docs/PLAN_STEP3.md)
+    data: dict = None               # training projects: sources, negative folder, split, windows (see README.md, project.yaml)
     class_folders: list = None      # training projects: folder names, same order as classes
     training: dict = field(default_factory=dict)
     calibration_audio: list = field(default_factory=list)
@@ -31,7 +32,7 @@ class Project:
     confidence: int = 50
     torch_python: Path = ROOT / ".venv-torch" / "bin" / "python"
     tf_python: Path = ROOT / ".venv-tf" / "bin" / "python"
-    firmware_repo: Path = ROOT / "third_party" / "audiomoth-fw"
+    firmware_repo: Path = ROOT / "audiomoth"
     tflm: Path = None
     firmware_tests: bool = True
     runs: Path = ROOT / "runs"
@@ -88,18 +89,22 @@ def name_problem(n):
     return None
 
 
+def default_name(folder):
+    """A project without 'name' is named after its folder (runs/<folder>), in the characters a name may use."""
+    return re.sub(r"[^A-Za-z0-9._-]+", "-", folder.name).strip("-") or "project"
+
+
 def load(path):
     path = Path(path).resolve()
     base = path.parent
     raw = yaml.safe_load(path.read_text()) or {}
     rel = lambda p: None if p is None else (Path(p) if Path(p).is_absolute() else (base / p).resolve())
     errors = unknown_keys(raw)
-    if "name" not in raw: errors.append("missing 'name'")
     if ("checkpoint" in raw) == ("data" in raw): errors.append("give either 'checkpoint' (convert a model) or 'data' (train one)")
     if errors: raise SystemExit(f"{path}: " + "; ".join(errors))
     cal, dev, envs, fw, test = (raw.get(k) or {} for k in ("calibration", "device", "envs", "firmware", "test"))
     p = Project(
-        name=str(raw["name"]), checkpoint=None, classes=[],
+        name=str(raw["name"]) if "name" in raw else default_name(base), checkpoint=None, classes=[],
         calibration_audio=[rel(a) for a in cal.get("audio", [])], calibration_count=int(cal.get("count", 300)),
         eval_count=int(cal.get("eval", 100)), reference_audio=rel(raw.get("reference_audio")),
         test_audio=[rel(a) for a in test.get("audio", [])], test_windows=int(test.get("windows", 120)),

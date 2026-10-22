@@ -1,4 +1,4 @@
-"""Stage package: the model package the firmware builds from (layout: audiomoth-fw firmware/bird/model/README.md).
+"""Stage package: the model package the firmware builds from (layout: audiomoth/firmware/bird/model/README.md).
 
 runs/<name>/package/: model.tflite, model_config.json, generated/ (bird_frontend_tables.h, bird_tail_weights_i8.h,
 tail_dims.h, model_config.h), test/ (pipe_vec.cc, specs_one.npz: one window and its expected logits for the QEMU
@@ -8,15 +8,14 @@ backbone + C tail, built for the host) is checked against PyTorch on test window
 import json
 import re
 import shutil
-import subprocess
 
 from wren.config import ROOT
-from wren.runner import code, mark_done, need, sha256, stage_key, up_to_date
+from wren.runner import code, mark_done, need, sha256, stage_key, tree_hash, up_to_date
 
 
 def run(r, export_dir, force=False):
     p = r.p
-    fw = need(p.firmware_repo, "firmware repository (git submodule update --init)")
+    fw = need(p.firmware_repo, "firmware folder (audiomoth/)")
     bird = fw / "firmware" / "bird"
     out = p.run_dir / "package"
     work = p.run_dir / "package_work"
@@ -24,8 +23,7 @@ def run(r, export_dir, force=False):
     key = stage_key("package-1", p.trains, p.trains and prep_state.exists() and prep_state.read_text(),
                     p.trains and code("torchside/windows_ref.py", "tfside/device_eval.py"), export_dir / "model.tflite", export_dir / "reference.npz", p.checkpoint, p.classes,
                     p.negative, p.window_start, p.window_minutes, p.hop_seconds, p.confidence,
-                    [str(a) for a in p.test_audio], p.test_windows, subprocess.run(["git", "-C", str(fw), "rev-parse", "HEAD"],
-                    capture_output=True, text=True).stdout.strip())
+                    [str(a) for a in p.test_audio], p.test_windows, tree_hash(fw))
     if not force and up_to_date(out, key):
         print("package: up to date"); return out
     print("package")
@@ -41,7 +39,7 @@ def run(r, export_dir, force=False):
     (gen / "bird_frontend_tables.h").write_text(tables)
 
     # GRU, projection, attention and classifier weights (int8 per row) and the frame count
-    r.torch("tail_weights", "-m", "wren.torchside.run", bird / "gen_bird_tail.py", ROOT / "third_party" / "WrenNet",
+    r.torch("tail_weights", "-m", "wren.torchside.run", bird / "gen_bird_tail.py", ROOT / "wrennet",
             p.checkpoint, export_dir / "reference.npz", work / "tail")
     for f in ("bird_tail_weights_i8.h", "tail_dims.h"): shutil.copy(work / "tail" / f, gen / f)
 
@@ -58,11 +56,11 @@ def run(r, export_dir, force=False):
         r.torch("test_reference", "-m", "wren.torchside.windows_ref", p.run_dir / "prepare", "test", p.checkpoint,
                 work / "e2e_ref.npz", max(p.test_windows, 2000), p.training["seed"])
     else:
-        r.torch("test_reference", "-m", "wren.torchside.run", bird / "e2e_make_ref.py", ROOT / "third_party" / "WrenNet",
+        r.torch("test_reference", "-m", "wren.torchside.run", bird / "e2e_make_ref.py", ROOT / "wrennet",
                 p.checkpoint, work / "e2e_ref.npz", p.test_windows, *p.test_audio)
     check = r.tf("pipeline_check", bird / "e2e_check.py", work / "e2e_ref.npz", out / "model.tflite", work / "libfe.so", work / "libtail.so")
     m = re.search(r"windows=(\d+) \| argmax agree=(\d+)/(\d+) \| logits max\|d\|=([\d.]+)", check)
-    if not m: raise SystemExit("pipeline check: unexpected output, see logs/pipeline_check.log")
+    if not m: raise SystemExit("The check of the device version gave an unexpected result; details in logs/pipeline_check.log")
     windows, agree = int(m.group(1)), int(m.group(2))
     r.tf("test_vectors", bird / "gen_pipeline_vec.py", work / "e2e_ref.npz", 0, out / "model.tflite", work / "libfe.so",
          work / "libtail.so", test / "pipe_vec.cc")
@@ -78,10 +76,11 @@ def run(r, export_dir, force=False):
         result["device_eval"] = d
         print(f"  test windows: macro-F1 float {d['float_macro_f1']:.3f} -> device int8 {d['int8_macro_f1']:.3f}")
         if d["float_macro_f1"] - d["int8_macro_f1"] > 0.05:
-            raise SystemExit(f"int8 costs {d['float_macro_f1'] - d['int8_macro_f1']:.3f} macro-F1 on the test windows (limit 0.05)")
+            raise SystemExit(f"The device version loses {d['float_macro_f1'] - d['int8_macro_f1']:.3f} macro-F1 on the test "
+                             "windows compared with the original model (the limit is 0.05)")
     (out / "package.json").write_text(json.dumps(result, indent=2) + "\n")
     print(f"  device pipeline vs PyTorch: same class in {agree}/{windows} windows")
     if not p.trains and agree < 0.9 * windows:
-        raise SystemExit(f"the device pipeline disagrees with PyTorch on {windows - agree}/{windows} windows")
+        raise SystemExit(f"The device version disagrees with the original model on {windows - agree} of {windows} test windows")
     mark_done(out, key, **result)
     return out

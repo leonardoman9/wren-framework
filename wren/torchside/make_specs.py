@@ -1,4 +1,4 @@
-# Copied unchanged from WrenNet tools/bird_make_specs.py (not published in the WrenNet repository). Run through
+# Copied from WrenNet tools/bird_make_specs.py (not published in the WrenNet repository); + *.flac. Run through
 # wren/torchside/run.py, which gives it the general model loader (any number of classes).
 """Standardised dB spectrograms ([301, 64], time-major) from audio files, for calibration
 and evaluation of the int8 backbone. Takes the first 3 s of every file.
@@ -21,7 +21,7 @@ ckpt, out, n_cal, n_eval = Path(sys.argv[1]), Path(sys.argv[2]), int(sys.argv[3]
 files = []
 for arg in sys.argv[5:]:
     p = Path(arg)
-    files += sorted(p.rglob("*.wav")) + sorted(p.rglob("*.mp3")) if p.is_dir() else [p]
+    files += sorted(p.rglob("*.wav")) + sorted(p.rglob("*.mp3")) + sorted(p.rglob("*.flac")) if p.is_dir() else [p]
 random.Random(0).shuffle(files)
 m = load_model(ckpt)
 specs, names = [], []

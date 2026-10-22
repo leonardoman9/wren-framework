@@ -18,7 +18,11 @@ from tensorflow.lite.tools import flatbuffer_utils
 saved, f32_path, specs_path, n_cal, out, report = sys.argv[1], sys.argv[2], sys.argv[3], int(sys.argv[4]), sys.argv[5], sys.argv[6]
 specs = np.load(specs_path)
 calib, ev = specs["calib"][:n_cal], specs["eval"]
-if len(calib) < n_cal: sys.exit(f"only {len(calib)} calibration spectrograms, {n_cal} requested")
+MIN_CALIB = 20  # below this the int8 ranges are guesswork; the int8-vs-float gate still guards everything above it
+if len(calib) < MIN_CALIB:
+    sys.exit(f"only {len(calib)} windows of audio to tune the compressed model, at least {MIN_CALIB} are needed: add recordings")
+if len(calib) < n_cal:  # a small dataset: use all it has (calibration.count is an upper bound)
+    print(f"note: {len(calib)} calibration spectrograms available, {n_cal} requested; using all {len(calib)}")
 IN_SHAPE = tuple(tf.saved_model.load(saved).signatures["serving_default"].structured_input_signature[1]["spec"].shape)
 conv = tf.lite.TFLiteConverter.from_saved_model(saved)
 conv.optimizations = [tf.lite.Optimize.DEFAULT]
@@ -64,7 +68,7 @@ flatbuffer_utils.strip_strings(m)
 flatbuffer_utils.write_model(m, out)
 os.remove(raw)
 i = Interpreter(model_path=out).get_input_details()[0]
-info = {"calibration": len(calib), "eval": len(ev), "int8_vs_float_rel_rms": rel, "operators": ops,
+info = {"calibration": len(calib), "calibration_requested": n_cal, "eval": len(ev), "int8_vs_float_rel_rms": rel, "operators": ops,
         "tensors": len(m.subgraphs[0].tensors), "bytes": os.path.getsize(out),
         "input_scale": float(i["quantization"][0]), "input_zero_point": int(i["quantization"][1])}
 open(report, "w").write(json.dumps(info, indent=2) + "\n")

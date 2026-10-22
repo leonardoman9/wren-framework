@@ -1,9 +1,9 @@
 """Stages prepare, train, evaluate (training projects): audio folders -> labelled windows -> checkpoint -> test metrics.
-See docs/PLAN_STEP3.md. Outputs: runs/<name>/prepare/, train/ (best.pt), evaluate/."""
+Options: README.md (project.yaml). Outputs: runs/<name>/prepare/, train/ (best.pt), evaluate/."""
 import json
 
 from wren.config import ROOT
-from wren.runner import code, listing, mark_done, stage_key, submodule_commit, up_to_date
+from wren.runner import code, listing, mark_done, stage_key, tree_hash, up_to_date
 
 
 def _spec(dir_, name, spec):
@@ -38,9 +38,9 @@ def train(r, prep_dir, prep_key, force=False):
     out = p.run_dir / "train"
     out.mkdir(parents=True, exist_ok=True)
     spec = {"classes": p.classes, "negative": p.negative_index, **p.training,
-            "wrennet_checkpoint": str(ROOT / "third_party" / "WrenNet" / "best_distillation_model.pt")}
+            "wrennet_checkpoint": str(ROOT / "wrennet" / "best_distillation_model.pt")}
     key = stage_key("train-1", prep_key, spec, code("torchside/train.py", "torchside/model.py", "torchside/metrics.py"),
-                    ROOT / "third_party" / "WrenNet" / "best_distillation_model.pt", submodule_commit("WrenNet"))
+                    ROOT / "wrennet" / "best_distillation_model.pt", tree_hash(ROOT / "wrennet"))
     if not force and up_to_date(out, key) and (out / "best.pt").exists():
         print("train: up to date"); return out, key
     print(f"train ({p.training['init']}, up to {p.training['epochs']} epochs)")
