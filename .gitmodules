@@ -1,6 +1,0 @@
-[submodule "third_party/WrenNet"]
-	path = third_party/WrenNet
-	url = https://github.com/sciapponi/WrenNet
-[submodule "third_party/audiomoth-fw"]
-	path = third_party/audiomoth-fw
-	url = https://github.com/leonardoman9/audiomoth-nn-deployment
