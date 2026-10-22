@@ -53,7 +53,11 @@ jobs:
             runs/birds/export/quantize.json
             runs/birds/export/tf/backbone_sim_float32.tflite
             runs/birds/export/backbone_sim.onnx
+            runs/birds/export/backbone.onnx
+            runs/birds/export/model.tflite
             runs/birds/package_work/e2e_ref.npz
+            runs/birds/package/test/pipe_vec.cc
+            runs/birds/firmware/birds.bin
       - name: Logs
         if: failure()
         uses: actions/upload-artifact@v4

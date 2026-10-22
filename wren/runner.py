@@ -30,16 +30,26 @@ LABELS = {
 }
 
 
+# The stages that must give the same bytes on every x86 computer (export, package) run their numerical libraries on
+# one fixed code path: their fastest kernels are chosen from the CPU at run time (AVX-512, AVX2, emulated AVX2 on
+# Apple silicon...) and from the thread count, and sum in different orders. Training is not pinned: it is judged by
+# the quality gates, not by bytes (constitution V).
+PINNED = {"ATEN_CPU_CAPABILITY": "default", "MKL_CBWR": "COMPATIBLE", "ONEDNN_MAX_CPU_ISA": "SSE41",
+          "DNNL_MAX_CPU_ISA": "SSE41", "TF_ENABLE_ONEDNN_OPTS": "0", "OMP_NUM_THREADS": "1", "MKL_NUM_THREADS": "1",
+          "OPENBLAS_NUM_THREADS": "1", "TF_NUM_INTRAOP_THREADS": "1", "TF_NUM_INTEROP_THREADS": "1"}
+
+
 class Runner:
     def __init__(self, project):
         self.p = project
+        self.pinned = False  # set by the export and package stages
         self.logs = project.run_dir / "logs"
         self.logs.mkdir(parents=True, exist_ok=True)
 
     def run(self, name, cmd, env=None, cwd=None):
         """Runs cmd, writes its output to logs/<name>.log, returns the output; raises StepFailed on a non-zero exit."""
         e = dict(os.environ, PYTHONPATH=str(ROOT) + os.pathsep + os.environ.get("PYTHONPATH", ""),
-                 WRENNET_ROOT=str(ROOT / "wrennet"), **(env or {}))
+                 WRENNET_ROOT=str(ROOT / "wrennet"), **(PINNED if self.pinned else {}), **(env or {}))
         cmd = [str(c) for c in cmd]
         label = LABELS.get(name, name.replace("_", " "))
         print(f"  - {label}", flush=True)

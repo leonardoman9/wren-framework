@@ -14,13 +14,14 @@ from wren.runner import code, mark_done, need, sha256, stage_key, tree_hash, up_
 
 
 def run(r, export_dir, force=False):
+    r.pinned = True  # byte-identical on every x86 computer (runner.PINNED)
     p = r.p
     fw = need(p.firmware_repo, "firmware folder (audiomoth/)")
     bird = fw / "firmware" / "bird"
     out = p.run_dir / "package"
     work = p.run_dir / "package_work"
     prep_state = p.run_dir / "prepare" / "stage.json"
-    key = stage_key("package-1", p.trains, p.trains and prep_state.exists() and prep_state.read_text(),
+    key = stage_key("package-2", p.trains, p.trains and prep_state.exists() and prep_state.read_text(),
                     p.trains and code("torchside/windows_ref.py", "tfside/device_eval.py"), export_dir / "model.tflite", export_dir / "reference.npz", p.checkpoint, p.classes,
                     p.negative, p.window_start, p.window_minutes, p.hop_seconds, p.confidence,
                     [str(a) for a in p.test_audio], p.test_windows, tree_hash(fw))

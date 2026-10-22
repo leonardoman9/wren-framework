@@ -20,11 +20,12 @@ def audio_files(paths):
 
 
 def run(r, force=False):
+    r.pinned = True  # byte-identical on every x86 computer (runner.PINNED)
     p = r.p
     out = p.run_dir / "export"
     out.mkdir(parents=True, exist_ok=True)
     prep = p.run_dir / "prepare"
-    key = stage_key("export-1", p.checkpoint, [str(a) for a in p.calibration_audio], p.calibration_count, p.eval_count,
+    key = stage_key("export-2", p.checkpoint, [str(a) for a in p.calibration_audio], p.calibration_count, p.eval_count,
                     str(p.reference_audio), p.trains and (prep / "stage.json").read_text(), p.trains and p.hop_seconds,
                     p.trains and code("torchside/specs_from_windows.py"))
     if not force and up_to_date(out, key):
