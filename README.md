@@ -216,6 +216,7 @@ see [audiomoth/docs/FIRST_BOARD_TEST.md](audiomoth/docs/FIRST_BOARD_TEST.md).
 
 ## Licences and credits
 
+- **wren-framework** (`wren/`, `wrennet/`, the tests, tools and documentation): MIT licence; see `LICENSE`.
 - **AudioMoth firmware** (`audiomoth/`): MIT licence, Open Acoustic Devices; see `audiomoth/LICENSE`.
 - **Bird calibration recordings** (`examples/birds/calibration/`): 3 s excerpts of xeno-canto recordings under CC0,
   CC BY or CC BY-SA. Each clip keeps its licence. The recordist, licence and source of every clip are listed in
