@@ -391,13 +391,13 @@ where the YAML contains only `data:` and `negative:`. The firmware and the repor
   - `git grep -n -i -E "biodcase|third_party/(WrenNet|audiomoth-fw)|/Users/|/private/tmp|--recursive|wren setup\b"`;
   - fix every hit except historical notes in `specs/`;
   - confirm that `git ls-files | grep -E "pipe_vec.cc|specs_one.npz"` lists only the regenerated files.
-- [ ] T048 Run quickstart.md scenarios 1–5 on this Mac (native and Docker) and record the results in the PR
+- [X] T048 Run quickstart.md scenarios 1–5 on this Mac (native and Docker) and record the results in the PR
   description. For scenario 1, follow only `README.md` from a fresh clone. Record every manual step and the
   hands-on time (excluding download, build and training waits) to check SC-001 (under 30 minutes) and SC-005
   (no undocumented steps).
 - [X] T049 Remove the "Sync Impact Report" HTML comment from the top of `.specify/memory/constitution.md`
   before the final commit.
-- [ ] T050 Re-run `/speckit-analyze` and resolve any remaining CRITICAL or HIGH findings.
+- [X] T050 Re-run `/speckit-analyze` and resolve any remaining CRITICAL or HIGH findings.
 
 ---
 
