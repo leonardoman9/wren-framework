@@ -38,7 +38,7 @@ Linux x86_64 and native macOS ARM. The two native jobs check the parity checks a
 for build scripts; C/C++ for the firmware (unchanged).
 
 **Primary Dependencies**: PyTorch 2.14.1, torchaudio 2.11.0, onnx 1.23.2 and onnxruntime 1.31.0 (torch env);
-TensorFlow 2.16.2, onnx2tf 1.28.8 and ai-edge-litert 2.3.0 (tf env); TFLM at e0021ca plus `tflm-no-int4.patch`;
+TensorFlow 2.16.2, onnx2tf 1.28.8 and ai-edge-litert 2.3.0 (tf env); TFLM at e0021ca plus the local patches in `audiomoth/firmware/patches/` (int4 out, sorted objects);
 Arm GNU Toolchain 14.3.Rel1 (downloaded by TFLM); `uv` (developer-only, to regenerate lock files).
 
 **Storage**: Files only: `runs/<name>/…`, `envs/lock/*.txt`, `examples/birds/calibration/` (FLAC,
@@ -55,7 +55,7 @@ macOS arm64 (supported, CI-tested, parity only); macOS x86_64 and other platform
 
 **Performance Goals**: CI under 20 min per job (SC-003); clone to `.bin` in under 30 min hands-on (SC-001).
 
-**Constraints**: No machine-specific paths in the repo. Every download is pinned and checksum-verified.
+**Constraints**: The same bytes from Docker on every x86 computer (research R13). No machine-specific paths in the repo. Every download is pinned and checksum-verified.
 Firmware fits in 245,760 B. User-facing messages contain no ML or toolchain jargon (Principle I).
 
 **Scale/Scope**: Around 10 files changed in `wren/`, 1 Dockerfile, 1 workflow, at least 400 committed

@@ -12,11 +12,11 @@ No image is published. Every build starts from the same pinned inputs:
 | Input | Pinned by |
 |---|---|
 | Base image | `python:3.11.9-slim-bookworm@sha256:<digest>`, `--platform=linux/amd64` |
-| System packages | apt sources at `snapshot.debian.org/archive/debian/<timestamp>` |
+| System packages | apt sources at `snapshot.debian.org/archive/debian/<timestamp>`: build-essential, clang and libclang-rt-14-dev (firmware simulator with sanitizers), git, wget, curl, unzip, make, mtools, qemu-system-arm, libsndfile1 |
 | Python packages | `envs/lock/{torch,tf}-linux-x86_64.txt` with `--require-hashes` |
-| TFLM | commit e0021ca + `tflm-no-int4.patch` (`audiomoth/scripts/setup_tflm.sh`) |
+| TFLM | commit e0021ca + every patch in `audiomoth/firmware/patches/` (`audiomoth/scripts/setup_tflm.sh`); its layer copies only those patches and the scripts |
 | ARM GCC | 14.3.Rel1 x86_64, MD5-checked by TFLM's download script |
-| Repository | the build context (no submodules; `.dockerignore` excludes `runs/`, `.venv-*`, a local `tflite-micro`) |
+| Repository | the build context (no submodules; `.dockerignore` excludes `runs/`, `.venv-*`, a local `tflite-micro` and build output inside `audiomoth/`) |
 
 ## Run
 

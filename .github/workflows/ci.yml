@@ -36,7 +36,7 @@ jobs:
       - name: Unit checks
         run: >
           docker run --rm --entrypoint sh wren -c
-          ".venv-torch/bin/python tests/test_training.py && .venv-torch/bin/python -m pytest -q tests/test_setup.py tests/test_examples.py"
+          ".venv-torch/bin/python tests/test_training.py && .venv-torch/bin/python -m pytest -q tests/test_setup.py tests/test_examples.py tests/test_stage_keys.py"
       - name: Synthetic end to end
         run: >
           docker run --rm -v "$PWD/runs:/wren/runs" --entrypoint sh wren -c

@@ -66,6 +66,13 @@ the Rationale and the Alternatives considered.
   - Task: measure on the developer's Mac.
   - Fallback 1: if a `linux/arm64` image gives identical bytes, allow both.
   - Fallback 2: otherwise document the minimum macOS version.
+- **Outcome (2026-10-22)**: the risk did not materialise. On an Apple-silicon Mac (macOS 26, Rosetta exposes AVX2
+  and FMA) the `linux/amd64` image builds in about 20 minutes and runs the whole pipeline. After R13 its bytes
+  match the CI's AMD EPYC runner exactly, so neither fallback is needed.
+- **Image contents beyond the decision above**: apt also installs `clang` and `libclang-rt-14-dev` (the firmware
+  simulator is built with sanitizers), and the TFLM layer copies only `audiomoth/scripts/` and
+  `audiomoth/firmware/patches/`, so code changes do not rebuild TFLM. `.dockerignore` also excludes build output
+  inside `audiomoth/` (`out/`, `out_*/`), which the firmware link would otherwise pick up.
 
 ## R5. Calibration bundle (FR-013, FR-014, FR-015; clarification 1 as revised)
 
@@ -222,7 +229,9 @@ the Rationale and the Alternatives considered.
 - **Decision**: Setup checks these before anything is downloaded:
   - Python 3.11, `git`, `make`, a C compiler (`cc`), `wget` (TFLM's GCC download uses it; it is missing on
     stock macOS), `mtools` and `qemu-system-arm` (firmware tests).
-  - At least 15 GB free disk (the spec's figure; replaced by measured numbers after the first CI runs).
+  - On macOS, also `gmake` (GNU make 4): macOS's own make 3.81 cannot build TFLM (found by the CI).
+  - At least 6 GB free disk: measured on 2026-10-22 as environments 2.4 GB + TFLM with its compiler 1.1 GB + pip
+    cache 0.5 GB, plus 30 %. `WREN_MIN_DISK_GB` may lower it on CI runners.
   - RAM: 8 GB documented, not checked.
   - Each missing tool gets a one-line install hint for apt or Homebrew.
 - **Rationale**: Fail early with clear messages (spec edge cases).
@@ -241,3 +250,39 @@ the Rationale and the Alternatives considered.
 - **Decision**: If `.venv-torch` or `.venv-tf` is a symlink, setup removes the link (never its target) and
   creates a real venv. `--check` reports symlinked environments as an error.
 - **Rationale**: Every pipeline module already resolves `ROOT/.venv-*`. Only the setup has to change.
+
+## R13. The same bytes on every x86 computer (SC-004, constitution V)
+
+- **Observed**: the first green CI runs failed only on the byte-exact bird reproduction. Docker on the CI's AMD EPYC
+  7763 runner and Docker emulated on Apple silicon produced a different int8 model and firmware, though every
+  parity check passed on both. Step-by-step comparison of the conversion's intermediate files found five
+  sources:
+  1. PyTorch, MKL, oneDNN and TensorFlow pick kernels from the CPU's instruction set and the thread count;
+  2. MKL's last bit differs between Intel and AMD, and on AMD it ignores its reproducibility settings
+     (`MKL_CBWR`), which affected the batch-norm folding done by the ONNX exporter and the float32 forward
+     passes;
+  3. TensorFlow folds the batch norms that follow residual sums with an approximate `1/sqrt` instruction whose
+     result differs between Intel and AMD;
+  4. TFLM's Makefile lists the library's objects in filesystem order, which changed the firmware's layout from
+     one build to the next;
+  5. build output inside `audiomoth/` was copied into the image, and the firmware link takes every
+     `obj/*.o`.
+- **Decision**:
+  1. `export` and `package` run with fixed kernels and one thread (`wren/runner.py`, `PINNED`). Training is not
+     pinned.
+  2. The export script folds batch norm into the convolutions itself, in float64 with NumPy, rounding once to
+     float32. Each fold is verified on a test input and undone if it is not exact. Calibration spectrograms
+     and test-window logits are computed in float64 and rounded to float32.
+  3. The six batch norms after residual sums are exported as Mul and Add with constants computed the same way.
+  4. A local TFLM patch (`tflm-sorted-objects.patch`) sorts the object lists. The archives and the object folder
+     are rebuilt from empty, and setup rebuilds TFLM when the patches change.
+  5. `.dockerignore` excludes `audiomoth/**/out*/`.
+- **Rationale**: float64 differences between CPUs are around 1e-16 and disappear when rounded to float32 (an
+  observable flip has a probability of about 1e-9 per value). Exact IEEE operations (NumPy's multiply, divide
+  and sqrt) are identical everywhere. Each fix removes one source rather than tolerating it.
+- **Result**: CI run 39838783696 reproduces the bird package and both firmware binaries byte for byte on the AMD
+  runner, matching the reference made in Docker on Apple silicon. The model's behaviour is unchanged: 112 of 120
+  test windows agree with the original, and no confident window changes.
+- **Alternatives**: making only the int8 model functionally equivalent (a tolerance test) was rejected by the
+  maintainer in favour of a real fix. Pinning `MKL_CBWR` alone was tried: it has no effect on AMD.
+

@@ -115,6 +115,11 @@ def tree_hash(folder):
     return h.hexdigest()
 
 
+def content(*paths):
+    """Content hashes of files and folders (audio inputs): part of a stage key, so changed clips rerun the stage."""
+    return [tree_hash(p) if Path(p).is_dir() else sha256(p) if Path(p).is_file() else None for p in paths if p]
+
+
 def up_to_date(out_dir, key):
     f = Path(out_dir) / "stage.json"
     return f.exists() and json.loads(f.read_text()).get("key") == key
