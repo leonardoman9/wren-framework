@@ -10,7 +10,8 @@ TFLM=$(cd "$1" && pwd)
 if [ -d "$2" ]; then PKG=$(cd "$2" && pwd); MODEL=$(ls "$PKG"/*.tflite | head -n 1); else PKG=$(cd "$(dirname "$2")" && pwd); MODEL="$PKG/$(basename "$2")"; fi
 GEN="$PKG/generated"; [ -f "$GEN/model_config.h" ] || { echo "$GEN/model_config.h missing (firmware/bird/gen_model_config.py)"; exit 1; }
 HERE=$(cd "$(dirname "$0")" && pwd); P=$(cd "$HERE/.." && pwd); ROOT=$(cd "$P/.." && pwd); REPO="$ROOT/vendor/audiomoth"
-BIRD="$P/bird"; OUT="$HERE/out"; mkdir -p "$OUT/obj"
+BIRD="$P/bird"; OUT="$HERE/out"
+rm -rf "$OUT/obj"; mkdir -p "$OUT/obj"  # the link takes obj/*.o: no object from an earlier build may slip in
 GCC="$TFLM/tensorflow/lite/micro/tools/make/downloads/gcc_embedded/bin/arm-none-eabi"
 D="$TFLM/tensorflow/lite/micro/tools/make/downloads"
 LIB="$TFLM/gen/cortex_m_generic_cortex-m4+fp_release_cmsis_nn_gcc/lib/libtensorflow-microlite.a"

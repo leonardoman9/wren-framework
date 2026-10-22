@@ -8,6 +8,8 @@ set -e
 ROOT=$(cd "$(dirname "$0")/.." && pwd); TFLM=$(cd "${1:-$ROOT/third_party/tflite-micro}" && pwd)
 MAKE=$(command -v gmake || command -v make)
 cd "$TFLM"
+# start from empty libraries: `ar` would keep an existing archive's member order, and the order sets the firmware's layout
+rm -f gen/*/lib/libtensorflow-microlite.a
 for bt in release release_with_logs; do
   "$MAKE" -j8 -f tensorflow/lite/micro/tools/make/Makefile TARGET=cortex_m_generic TARGET_ARCH=cortex-m4+fp \
     OPTIMIZED_KERNEL_DIR=cmsis_nn BUILD_TYPE=$bt KERNEL_OPTIMIZATION_LEVEL=-Os THIRD_PARTY_KERNEL_OPTIMIZATION_LEVEL=-Os \

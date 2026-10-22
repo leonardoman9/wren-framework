@@ -34,7 +34,7 @@ Python that was typed lacks the pipeline's packages, so users never call a venv 
 | Input | Pinned by |
 |---|---|
 | Python packages | `envs/lock/{torch,tf}-{linux-x86_64,macos-arm64}.txt`, every package with hashes (`envs/README.md`) |
-| TFLM | commit `e0021ca` + `audiomoth/firmware/patches/tflm-no-int4.patch` (`audiomoth/scripts/setup_tflm.sh`) |
+| TFLM | commit `e0021ca` + the local patches `audiomoth/firmware/patches/*.patch` (int4 kernels out; object lists sorted, so the firmware layout is the same everywhere) |
 | ARM compiler | Arm GNU Toolchain 14.3.Rel1 (GCC 14.3.1), downloaded and MD5-checked by TFLM's own script |
 | Docker base image | `python:3.11.9-slim-bookworm` by digest, `linux/amd64` |
 | Debian packages | `snapshot.debian.org` at a fixed date (`docker/Dockerfile`, `DEBIAN_SNAPSHOT`) |

@@ -125,13 +125,21 @@ def host_lib():
             if "cortex_m" not in str(p)]
 
 
+def tflm_build_key():
+    """What the TFLM build depends on besides its commit: the local patches and the two scripts."""
+    files = sorted((FW / "firmware" / "patches").glob("*.patch")) + [FW / "scripts" / "setup_tflm.sh", FW / "scripts" / "build_tflm.sh"]
+    return hashlib.sha256(b"".join(f.read_bytes() for f in files)).hexdigest()
+
+
 def tflm_ready():
     libs = [TFLM / f"gen/cortex_m_generic_cortex-m4+fp_{bt}_cmsis_nn_gcc/lib/libtensorflow-microlite.a"
             for bt in ("release", "release_with_logs")]
     if not (all(p.exists() for p in libs) and host_lib() and GCC.exists()):
         return False
     head = subprocess.run(["git", "-C", str(TFLM), "rev-parse", "HEAD"], capture_output=True, text=True).stdout.strip()
-    return head == TFLM_COMMIT and GCC_VERSION in gcc_version()
+    marker = TFLM / ".wren-build"
+    return (head == TFLM_COMMIT and GCC_VERSION in gcc_version() and marker.exists()
+            and marker.read_text().strip() == tflm_build_key())
 
 
 def gcc_version():
@@ -169,12 +177,15 @@ def install_env(env, lock, python):
 
 def install_tflm():
     what = "Preparing the firmware build tools"
+    if (TFLM / ".git").exists():  # a rebuild after the patches changed: back to the pristine commit first
+        step(["git", "-C", TFLM, "checkout", "--", "."], what)
     step(["sh", FW / "scripts" / "setup_tflm.sh"], what)
     step(["sh", FW / "scripts" / "build_tflm.sh"], what, env={"HOST": "1"})
     if GCC_VERSION not in gcc_version():
         print(f"\n{what} failed: an unexpected compiler was installed. Details in {LOG.relative_to(ROOT)}.",
               file=sys.stderr)
         sys.exit(1)
+    (TFLM / ".wren-build").write_text(tflm_build_key() + "\n")
 
 
 # ---------------------------------------------------------------- entry points

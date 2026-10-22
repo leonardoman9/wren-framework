@@ -7,3 +7,5 @@ audiomoth/third_party/tflite-micro/
 .claude/
 .DS_Store
 .pytest_cache/
+audiomoth/**/out/
+audiomoth/**/out_*/
