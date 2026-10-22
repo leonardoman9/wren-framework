@@ -44,7 +44,7 @@ jobs:
       - name: Bird model reproduction (byte for byte, package and firmware)
         run: docker run --rm -v "$PWD/runs:/wren/runs" --entrypoint sh wren tests/test_birds_reproduction.sh
       - name: Bird conversion intermediates (to locate a byte difference between hosts)
-        if: always()
+        if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: birds-intermediates

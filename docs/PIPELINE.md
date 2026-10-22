@@ -46,6 +46,21 @@ Byte-identity is guaranteed only on the Docker path, which is `linux/amd64` on a
 the compiler builds differ by CPU architecture and OS (constitution V). Native installs are held to the parity checks
 and gates. `runs/<name>/provenance.json` records which path, platform, locks and source hashes made a run.
 
+## Why the bytes match on every x86 computer
+
+The first CI runs found that Docker on an AMD server and Docker emulated on Apple silicon gave a different int8
+model and firmware, although every check passed on both. Numerical libraries pick their code from the CPU, and
+CPUs round the last bit differently. Each source was removed where it was found:
+
+| Source | Fix |
+|---|---|
+| PyTorch, MKL, oneDNN and TensorFlow kernels chosen by CPU features and thread count | `export` and `package` run with fixed kernels and one thread (`wren/runner.py`, `PINNED`) |
+| MKL's last bit differs between Intel and AMD, and its reproducibility settings are ignored on AMD | batch norm is folded into the convolutions by `export_backbone.py`, in float64 with NumPy and rounded once to float32; calibration spectrograms and test-window logits are computed in float64 and rounded to float32 |
+| TensorFlow's approximate `1/sqrt` instruction differs between Intel and AMD | the batch norms after residual sums are exported as Mul and Add with constants computed in float64 |
+| TFLM's Makefile ordered the library's objects as the filesystem listed them, which changed the firmware's layout | `audiomoth/firmware/patches/tflm-sorted-objects.patch`; the archives and the object folder are rebuilt from empty |
+
+`tests/test_birds_reproduction.sh` in the CI's Docker job checks the result on every change.
+
 ## Tests
 
 | Test | What it covers |

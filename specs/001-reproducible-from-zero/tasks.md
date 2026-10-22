@@ -268,7 +268,7 @@ deliberately broken commit fails with a plain `FAILED:` line and a non-zero exit
   - `actions/cache` for `audiomoth/third_party/tflite-micro`, keyed on the TFLM commit plus
     `hashFiles('audiomoth/firmware/patches/**', 'audiomoth/scripts/build_tflm.sh')`;
   - `actions/upload-artifact` of `runs/**/logs` with `if: failure()`.
-- [ ] T031 [US2] Open a PR from the feature branch and get all three jobs green. Record the warm-cache
+- [X] T031 [US2] Open a PR from the feature branch and get all three jobs green. Record the warm-cache
   durations (SC-003). Then, on a throwaway branch, break `audiomoth/firmware/patches/tflm-no-int4.patch`. CI
   must fail with a plain `FAILED:` line (US2 scenario 3). Delete the throwaway branch afterwards.
 
@@ -352,7 +352,7 @@ prints `PASS`, with all 7 package files identical and both firmware sha256 value
   and the test vector.
 - [X] T041 [US3] Add `tests/test_birds_reproduction.sh` to the `docker` job in `.github/workflows/ci.yml`
   (after the synthetic run).
-- [ ] T042 [US3] Confirm SC-004: the reproduction test passes in the CI `docker` job (Linux host) and in
+- [X] T042 [US3] Confirm SC-004: the reproduction test passes in the CI `docker` job (Linux host) and in
   Docker on this Mac (macOS host) with the same commit. If T024 found amd64 emulation unusable on this Mac,
   run the reproduction in the `linux/arm64` build instead and compare its bytes with the CI amd64 result:
   - if they are identical, allow both architectures (research R4, fallback 1);
@@ -391,7 +391,7 @@ where the YAML contains only `data:` and `negative:`. The firmware and the repor
   - `git grep -n -i -E "biodcase|third_party/(WrenNet|audiomoth-fw)|/Users/|/private/tmp|--recursive|wren setup\b"`;
   - fix every hit except historical notes in `specs/`;
   - confirm that `git ls-files | grep -E "pipe_vec.cc|specs_one.npz"` lists only the regenerated files.
-- [ ] T048 Run quickstart.md scenarios 1–5 on this Mac (native and Docker) and record the results in the PR
+- [X] T048 Run quickstart.md scenarios 1–5 on this Mac (native and Docker) and record the results in the PR
   description. For scenario 1, follow only `README.md` from a fresh clone. Record every manual step and the
   hands-on time (excluding download, build and training waits) to check SC-001 (under 30 minutes) and SC-005
   (no undocumented steps).
