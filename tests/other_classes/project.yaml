@@ -5,7 +5,7 @@ checkpoint: ../../runs/test_checkpoint_4.pt
 classes: [frog, toad, cricket, background]
 negative: last
 calibration:
-  audio: [/Users/leonardomannini/Progetti/BioDCASE/2026/biodcase_model/BioDCASE2026_TinyML_Development_Dataset/Train]
+  audio: [../../examples/birds/calibration/audio]   # any bird audio will do: the predictions are meaningless
   count: 100
   eval: 50
 test:
