@@ -1,0 +1,9 @@
+runs/
+.venv-*
+audiomoth/third_party/tflite-micro/
+**/__pycache__
+*.pyc
+.git
+.claude/
+.DS_Store
+.pytest_cache/
