@@ -42,6 +42,18 @@ jobs:
           ".venv-torch/bin/python tests/make_synthetic_dataset.py runs/synth_data && .venv-torch/bin/python -m wren run tests/synthetic/project.yaml"
       - name: Bird model reproduction (byte for byte, package and firmware)
         run: docker run --rm -v "$PWD/runs:/wren/runs" --entrypoint sh wren tests/test_birds_reproduction.sh
+      - name: Bird conversion intermediates (to locate a byte difference between hosts)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: birds-intermediates
+          path: |
+            runs/birds/export/specs.npz
+            runs/birds/export/reference.npz
+            runs/birds/export/quantize.json
+            runs/birds/export/tf/backbone_sim_float32.tflite
+            runs/birds/export/backbone_sim.onnx
+            runs/birds/package_work/e2e_ref.npz
       - name: Logs
         if: failure()
         uses: actions/upload-artifact@v4
