@@ -23,8 +23,9 @@ MIN_DISK_GB = 6  # environments 2.4 GB + TFLM with its compiler 1.1 GB + pip cac
 ENVS = ("torch", "tf")
 TOOLS = {"git": "git", "make": "make", "cc": "a C compiler", "clang": "clang", "wget": "wget", "mformat": "mtools",
          "qemu-system-arm": "qemu"}  # clang: the firmware simulator is built with its sanitizers
+MAC_TOOLS = {"gmake": "GNU make 4 (macOS's own make is too old for TFLM)"}
 INSTALL_HINT = {"linux": "sudo apt install git make gcc clang wget mtools qemu-system-arm",
-                "darwin": "xcode-select --install   (git, make, C compilers), then: brew install wget mtools qemu"}
+                "darwin": "xcode-select --install   (git, C compilers), then: brew install make wget mtools qemu"}
 DOCKER = "please use Docker instead (see README, 'Using Docker')."
 
 
@@ -82,14 +83,15 @@ def check_disk(free_gb=None):
         raise Stop(f"About {need:.0f} GB of free disk space is needed; {free_gb:.0f} GB are free.")
 
 
-def missing_tools(which=shutil.which):
-    return [name for exe, name in TOOLS.items() if not which(exe)]
+def missing_tools(which=shutil.which, system=None):
+    tools = {**TOOLS, **(MAC_TOOLS if (system or sys.platform) == "darwin" else {})}
+    return [name for exe, name in tools.items() if not which(exe)]
 
 
 def check_tools(which=shutil.which, system=None):
-    missing = missing_tools(which)
+    system = "darwin" if (system or sys.platform) == "darwin" else "linux"
+    missing = missing_tools(which, system)
     if missing:
-        system = "darwin" if (system or sys.platform) == "darwin" else "linux"
         raise Stop("Some programs are missing: " + ", ".join(missing) + ".\nInstall them with:\n  "
                    + INSTALL_HINT[system] + "\nthen run this again.")
 

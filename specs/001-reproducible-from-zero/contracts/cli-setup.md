@@ -27,7 +27,7 @@ python -m wren setup [--tflm] [--check [--verbose]] [--python PATH]
 | 1 | Platform is Linux x86_64, or macOS arm64 at version 14 or later (the pinned PyTorch has wheels for macOS 14+ only) | macOS x86_64: "This Mac has an Intel processor. The analysis libraries no longer support it directly: please use Docker (see README, 'Using Docker')." Other: the same, naming the platform. |
 | 2 | Python 3.11 available | "Python 3.11 is needed (found 3.X). Install it from python.org or with your package manager, then run this again." |
 | 3 | Free disk ≥ 6 GB in the repo's filesystem (measured need ~4 GB + 30 %; `WREN_MIN_DISK_GB` may lower it, CI only) | "About 6 GB of free disk space is needed; X GB are free." |
-| 4 | Tools: git, make, cc, clang (firmware simulator with sanitizers), wget, mtools, qemu-system-arm | One line per missing tool, with the `apt install …` / `brew install …` line for the current OS |
+| 4 | Tools: git, make, cc, clang (firmware simulator with sanitizers), wget, mtools, qemu-system-arm; on macOS also `gmake` (GNU make 4: macOS's make 3.81 cannot build TFLM) | One line per missing tool, with the `apt install …` / `brew install …` line for the current OS |
 | 5 | Lock files exist for this platform and match their `.in` | Developer-facing: "envs/lock/… is out of date with envs/requirements-….in: regenerate the locks (see envs/README)" |
 
 ## Actions

@@ -39,9 +39,12 @@ def test_disk(monkeypatch):
 def test_missing_tool_hint():
     with pytest.raises(S.Stop) as e:
         S.check_tools(which=lambda exe: None if exe == "wget" else "/usr/bin/" + exe, system="darwin")
-    assert "wget" in str(e.value) and "brew install wget mtools qemu" in str(e.value)
+    assert "wget" in str(e.value) and "brew install make wget mtools qemu" in str(e.value)
     with pytest.raises(S.Stop, match="sudo apt install"):
         S.check_tools(which=lambda exe: None if exe == "mformat" else "/usr/bin/" + exe, system="linux")
+    with pytest.raises(S.Stop, match="GNU make 4"):  # macOS: the system make (3.81) cannot build TFLM
+        S.check_tools(which=lambda exe: None if exe == "gmake" else "/usr/bin/" + exe, system="darwin")
+    S.check_tools(which=lambda exe: None if exe == "gmake" else "/usr/bin/" + exe, system="linux")
 
 
 @pytest.fixture

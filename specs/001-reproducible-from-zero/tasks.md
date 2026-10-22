@@ -375,7 +375,7 @@ where the YAML contains only `data:` and `negative:`. The firmware and the repor
   folder, cleaned to `[A-Za-z0-9._-]`, instead of failing with "missing 'name'". Update the docstring.
 - [X] T044 [US4] Create `tests/minimal/project.yaml` with only `data: {root: ../../runs/synth_data}` and
   `negative: background`, plus a comment explaining that it tests US4 scenario 2.
-- [ ] T045 [US4] Run the minimal project natively and in Docker. All stages must complete with default
+- [X] T045 [US4] Run the minimal project natively and in Docker. All stages must complete with default
   parameters. If the default training is too long for CI, add a config-load check of `tests/minimal` to
   `tests/test_examples.py` instead of a full CI run, and note the measured time.
 - [X] T046 [P] [US4] Check that `README.md` documents every `project.yaml` parameter and its default

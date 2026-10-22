@@ -56,7 +56,7 @@ What the computer needs:
 - **Python 3.11** (python.org, Homebrew or your package manager).
 - **A few programs.**
   - On Linux: `sudo apt install git make gcc clang wget mtools qemu-system-arm`.
-  - On macOS: `xcode-select --install`, then `brew install wget mtools qemu`.
+  - On macOS: `xcode-select --install`, then `brew install make wget mtools qemu`.
 - **About 6 GB of free disk** for the tools (they use about 4 GB), plus room for your runs, and **8 GB of RAM**.
 
 ```sh
