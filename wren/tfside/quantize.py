@@ -2,7 +2,8 @@
 Usage: python -m wren.tfside.quantize SAVED_MODEL_DIR FLOAT32.tflite SPECS.npz N_CALIB OUT.tflite REPORT.json
 
 The recipe of the shipped bird model (WrenNet's tools/bird_conversion/quant_variants.py, int8 mode): full-integer
-quantization with int8 input and output, calibrated on the first N_CALIB spectrograms of SPECS.npz 'calib'; then the
+quantization with int8 input and output, calibrated on the first N_CALIB spectrograms of SPECS.npz 'calib' (ranges
+measured with the reference kernels, see below); then the
 tensor names are stripped (smaller flash). The report compares the int8 backbone with the float one on 'eval'.
 """
 import json
@@ -11,7 +12,8 @@ import sys
 
 import numpy as np
 import tensorflow as tf
-from ai_edge_litert.interpreter import Interpreter
+from ai_edge_litert.interpreter import Interpreter, OpResolverType
+from tensorflow.lite.python.convert import deduplicate_readonly_buffers, mlir_quantize
 from tensorflow.lite.python import schema_py_generated as schema
 from tensorflow.lite.tools import flatbuffer_utils
 
@@ -36,8 +38,31 @@ def rep():
 
 
 conv.representative_dataset = rep
+# Calibration in two steps, so that it gives the same bytes on every x86 CPU (constitution V, research R13): the
+# converter's own calibrator runs the float model with kernels chosen from the CPU (AVX2 on AMD and emulated, AVX-512
+# on recent Intel), whose activation ranges differ in the last bits. The converter only collects which tensors need
+# a range; the ranges are measured with TFLite's reference kernels (no run-time choice of instructions) as each
+# tensor's actual min and max, and then the converter's own quantizer and buffer deduplication run on them.
+conv._experimental_calibrate_only = True
+model = flatbuffer_utils.convert_bytearray_to_object(conv.convert())
+tensors = [t for t in model.subgraphs[0].tensors]
+ranged = [i for i, t in enumerate(tensors) if t.quantization is not None and t.quantization.min is not None and len(t.quantization.min)]
+ref = Interpreter(model_content=bytes(flatbuffer_utils.convert_object_to_bytearray(model)),
+                  experimental_op_resolver_type=OpResolverType.BUILTIN_REF, experimental_preserve_all_tensors=True)
+ref.allocate_tensors()
+lo, hi = {i: np.inf for i in ranged}, {i: -np.inf for i in ranged}
+for c in calib:
+    ref.set_tensor(ref.get_input_details()[0]["index"], c.reshape(IN_SHAPE).astype(np.float32))
+    ref.invoke()
+    for i in ranged:
+        v = ref.get_tensor(i)
+        lo[i], hi[i] = min(lo[i], float(v.min())), max(hi[i], float(v.max()))
+for i in ranged:
+    tensors[i].quantization.min, tensors[i].quantization.max = [lo[i]], [hi[i]]
+quantized = mlir_quantize(flatbuffer_utils.convert_object_to_bytearray(model), False,
+                          input_data_type=tf.int8, output_data_type=tf.int8)
 raw = out + ".unstripped"
-open(raw, "wb").write(conv.convert())
+open(raw, "wb").write(deduplicate_readonly_buffers(quantized))
 
 
 def run(path, x, quant):

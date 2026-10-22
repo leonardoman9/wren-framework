@@ -266,7 +266,9 @@ the Rationale and the Alternatives considered.
   4. TFLM's Makefile lists the library's objects in filesystem order, which changed the firmware's layout from
      one build to the next;
   5. build output inside `audiomoth/` was copied into the image, and the firmware link takes every
-     `obj/*.o`.
+     `obj/*.o`;
+  6. on an Intel Xeon runner (AVX-512), found later, TFLite's int8 calibration measured the activation ranges
+     with kernels chosen from the CPU.
 - **Decision**:
   1. `export` and `package` run with fixed kernels and one thread (`wren/runner.py`, `PINNED`). Training is not
      pinned.
@@ -277,6 +279,10 @@ the Rationale and the Alternatives considered.
   4. A local TFLM patch (`tflm-sorted-objects.patch`) sorts the object lists. The archives and the object folder
      are rebuilt from empty, and setup rebuilds TFLM when the patches change.
   5. `.dockerignore` excludes `audiomoth/**/out*/`.
+  6. `quantize.py` stops the converter after calibration, measures every range with TFLite's reference kernels
+     (each tensor's actual min and max, so fused activations get their real range), and runs the converter's
+     quantizer and buffer deduplication on them. The int8 model is slightly better: relative RMS 0.163
+     instead of 0.166, and 116 instead of 112 of 120 windows agree.
 - **Rationale**: float64 differences between CPUs are around 1e-16 and disappear when rounded to float32 (an
   observable flip has a probability of about 1e-9 per value). Exact IEEE operations (NumPy's multiply, divide
   and sqrt) are identical everywhere. Each fix removes one source rather than tolerating it.

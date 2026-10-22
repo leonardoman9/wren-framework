@@ -48,7 +48,7 @@ Lophophanes cristatus, Periparus ater, Poecile montanus, non-bird.
   environment with `ai_edge_litert`, `torch`, `torchaudio`, `soundfile`.
 
 The model that goes into the firmware is in this repository, as a **model package** in `firmware/bird/model/`
-(int8 backbone `bird_backbone_int8.tflite`, sha256 `1d15bc6e…`, made by the wren pipeline from `examples/birds`, plus
+(int8 backbone `bird_backbone_int8.tflite`, sha256 `c1c814d2…`, made by the wren pipeline from `examples/birds`, plus
 the generated C headers and the class list; see "Other models" below). The PyTorch checkpoint
 (`wrennet/best_distillation_model.pt`) is only needed for the comparisons against PyTorch.
 
