@@ -51,7 +51,9 @@ package before feature 001's recalibration. No background windows, no per-record
 - **Decision**: CC0 field recordings from Freesound (API v2, `license:"Creative Commons 0"`, tags such as wind, rain,
   stream, river, insects, traffic, footsteps, forest ambience without birds), fetched by the same maintainer tool
   (FREESOUND_API_KEY), at most 30 s each, up to ~40 sounds, and **screened by BirdNET** (installed by feature 003): a
-  sound is kept only if no 3 s window has any bird species (a BirdNET label with a scientific name) above 0.1. Stored as
+  sound is kept only if no 3 s window has any bird species (a BirdNET label with a scientific name) above 0.1. With a
+  token key Freesound serves only the **HQ previews** (MP3/OGG, 44.1 kHz), not the original files (OAuth2 login): the
+  previews are used, resampled to 32 kHz (wind, rain and streams lose nothing that matters at 128 kbps). Stored as
   `examples/birds/test/audio/non-bird/FS<id>/FS<id>.flac` with attribution (CC0 needs none; kept for provenance).
 - **Alternatives**: the stretches without calls of the free bird recordings, screened by BirdNET (no extra key, but
   only quiet forest from birders' recordings, no wind or rain: rejected as the main source, kept as fallback if no
@@ -83,9 +85,8 @@ package before feature 001's recalibration. No background windows, no per-record
 The simulated analogue chain (70/60/50 dB SPL) came from WrenNet scripts that are not in this repository. **Decision**:
 not re-measured; the new §9 says they were removed and why (spec Assumptions).
 
-## R8. Blockers for implementation
+## R8. Keys
 
 The test bundle needs two maintainer keys, used once: `XC_API_KEY` (xeno-canto, as for the calibration bundle) and
-`FREESOUND_API_KEY` (free account). Neither is in this environment; the maintainer provides them (or runs the tool).
-Everything else (measurement, tests, CI, documentation) can be built and tested on a small fixture before the bundle
-exists.
+`FREESOUND_API_KEY` (token). Both are in `~/.wren-keys` (outside the repository, never committed) and were checked on
+2026-10-23: xeno-canto answers (1 CC0 recording of *Emberiza cia*), Freesound finds 10,519 CC0 sounds for "wind".

@@ -22,8 +22,8 @@ from feature 003 for screening, maintainer only) · **Storage**: `examples/birds
 calibration bundle's 47 MB) · **Testing**: `tests/test_bird_accuracy.sh` (Docker: byte-exact `accuracy.json`),
 `tests/test_measure.py` (statistics on a fixture), `tests/test_examples.py` (attribution and licences of the new
 bundle), `tests/test_training.py` (prepare unchanged for ratios > 0) · **Constraints**: the shipped package and every
-pipeline output unchanged (constitution V); no BioDCASE; CC0/BY/BY-SA only · **Blocker**: XC_API_KEY and
-FREESOUND_API_KEY for the one-time bundle build (research R8)
+pipeline output unchanged (constitution V); no BioDCASE; CC0/BY/BY-SA only · **Keys**: XC_API_KEY and
+FREESOUND_API_KEY for the one-time bundle build, in `~/.wren-keys` (research R8)
 
 ## Constitution Check
 
