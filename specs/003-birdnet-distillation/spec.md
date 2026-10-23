@@ -30,9 +30,19 @@ projects only, because BirdNET only knows birds (and a few other sound classes).
 - Q: Which training loss? → A: Focal distillation, as in the original WrenNet project (`FocalDistillationLoss`): a
   focal loss on the folder labels combined with a distillation loss on BirdNET's opinion,
   total = (1 − α) · focal(folder label) + α · T² · KL(model ‖ BirdNET), both softened by the temperature T. α (BirdNET's
-  share), T and the focal γ have documented defaults taken from the original project and can be overridden.
+  share), T and the focal γ have documented defaults taken from the original project and can be overridden (values:
+  see below).
 - Q: Which audio does BirdNET analyse? → A: Only the windows of the training set (the labelled folders), as in the
   original project. BirdNET does not label any other audio.
+- Q: Is the distillation target computed exactly as in the original code, or corrected so that BirdNET's opinion
+  counts? → A: Corrected (the maintainer: "correct it if the original loss was flawed"). The loss formula of the original
+  is sound and stays; its teacher target was not: it passed BirdNET's confidences (independent values between 0 and 1,
+  not a distribution) through softmax(confidence / T), which gives an almost uniform target (a 90 % BirdNET detection
+  becomes ~13 % among 9 classes), and set "non-bird" by fixed rules (0.1, 0.3, 0.1 × other species). The new target is
+  a probability distribution over the project's classes: BirdNET's confidence for each project species, plus "non-bird"
+  as the confidence that none of them is present, normalised to sum 1, then softened by T (p^(1/T), renormalised).
+- Q: Which defaults for α (BirdNET's share), T (temperature) and γ (focal)? → A: α 0.5, T 4, γ 2, the defaults of the
+  original `FocalDistillationLoss`; γ 2 is also wren's existing `focal_gamma` default.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -111,7 +121,12 @@ check with that message.
 - **FR-004**: Training MUST use the focal distillation loss of the original WrenNet project: a focal loss on each
   window's folder label plus a distillation (KL divergence) loss towards BirdNET's opinion for the project's species and
   for "no species of interest", combined as (1 − α) · focal + α · T² · KL with temperature T. α, T and the focal γ MUST
-  have documented defaults (those of the original project) and be overridable in `project.yaml`.
+  default to 0.5, 4 and 2 (the original `FocalDistillationLoss` defaults) and be overridable in `project.yaml`.
+- **FR-004a**: BirdNET's opinion of a window MUST become a probability distribution over the project's classes before
+  it is used as the target: per-species confidences plus a "non-bird" share for "none of the project's species",
+  normalised to sum 1 and softened by T; the original project's softmax over raw confidences and its fixed "non-bird"
+  values MUST NOT be used. A unit test MUST show that a 90 % BirdNET detection gives that species at least three times
+  the uniform share (1/N) of the target at the default T, where the original target gave 1.2–1.3 times.
 - **FR-005**: Model selection (best epoch) and the quality gates MUST keep using the folder labels only, so a model
   that copies BirdNET's mistakes is not rewarded (constitution, Pipeline & Quality Gates).
 - **FR-006**: The report MUST state that the model learned from BirdNET, BirdNET's version and licence, α, T and γ, and per species how often BirdNET's top species agreed with the folder label on the training windows.
