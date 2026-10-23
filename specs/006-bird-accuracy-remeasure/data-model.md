@@ -19,6 +19,7 @@ are `Bubo_bubo`, `Certhia_familiaris`, `Apus_apus`, `Certhia_brachydactyla`, `Em
 
 ```json
 {"package_sha256": "<bird_backbone_int8.tflite>", "checkpoint_sha256": "…", "bundle_sha256": "<SHA256SUMS>",
+ "confidence_threshold": 0.5,
  "classes": ["Bubo bubo", "…", "non-bird"], "unseen_after": "2025-06-11", "min_recordings": 5,
  "bootstrap": {"resamples": 2000, "seed": 0, "level": 0.95},
  "subsets": {
@@ -29,7 +30,8 @@ are `Bubo_bubo`, `Certhia_familiaris`, `Apus_apus`, `Certhia_brachydactyla`, `Em
 
 Per model version (`float`, `int8`): `accuracy` and `macro_f1` as `{"value", "ci": [lo, hi]}`, `recall` and `precision`
 per class, `confusion` (rows = true class, model order), `false_detection` (share of non-bird windows whose top class
-is a species) and `false_detection_confident` (same, top probability ≥ 50 %). Numbers rounded to 4 decimals; keys
+is a species) and `false_detection_confident` (same, top probability ≥ `confidence_threshold`, read from
+`examples/birds/project.yaml` `device.confidence`, 50 % today). Numbers rounded to 4 decimals; keys
 sorted.
 
 `accuracy.md`: the same as tables in plain words, the source of §9.

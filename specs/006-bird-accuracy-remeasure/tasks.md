@@ -21,8 +21,10 @@ byte-exact rerun in Docker; the bundle's licences in `tests/test_examples.py`.
 
 ## Phase 2: Foundational (blocks both stories)
 
-- [ ] T002 `wren/torchside/prepare.py`: a split ratio of exactly 0 means no files for that split (no `max(1, …)` carving,
-  no "no files in the … split" or "no windows" error for it); ratios above 0 unchanged. Update the module docstring
+- [ ] T002 `wren/torchside/prepare.py`: a split ratio of exactly 0 means no files for that split, in both carving paths
+  (sources `root`, and `train` given explicitly): no `max(1, …)` carving and no "no files in the … split" / "no
+  readable files" / "no windows" error for that split; the "at least 5 groups" check stays for ratios above 0 only.
+  Ratios above 0 unchanged. Update the module docstring
 - [ ] T003 [P] `wren/tfside/device_eval.py`: optional 7th argument `WINDOWS.npz`: write `labels`, `float_logits`,
   `int8_logits` per window (research R2); without it, output exactly as before
 - [ ] T004 Run `.venv-torch/bin/python tests/test_training.py` and the synthetic project's `prepare,train` (T002 must not
@@ -57,17 +59,19 @@ byte-exact rerun in Docker; the bundle's licences in `tests/test_examples.py`.
   recording move together; false-detection rates (any, and ≥ 50 % confidence) on non-bird windows; a class with < 5
   recordings is `"meaningful": false`; the unseen subset is `null` when empty; JSON keys sorted, 4 decimals
 - [ ] T009 [US1] `wren/torchside/accuracy.py` (`python -m wren.torchside.accuracy PREP_DIR WINDOWS.npz REF.npz
-  ATTRIBUTION.csv CLASSES_JSON OUT_DIR`): recordings from `files_train.json` paths (`XC<id>`/`FS<id>` subfolder) in
-  `windows_ref`'s window order, statistics of data-model.md and research R5 (2,000 resamples, seed 0, 95 %), `uploaded`
+  ATTRIBUTION.csv CLASSES_JSON OUT_DIR`): each window's recording from `REF.npz` `names` (prefix `XC<id>` / `FS<id>`
+  of `XC<id>_<k>.flac@<s>s`), in `windows_ref`'s window order; the confidence threshold from
+  `examples/birds/project.yaml` `device.confidence`, written into `accuracy.json`; statistics of data-model.md and research R5 (2,000 resamples, seed 0, 95 %), `uploaded`
   > 2025-06-11 subset, writes `accuracy.json` (sorted keys, 4 decimals) and `accuracy.md` (plain tables: overall,
   per species, confusion, false detections, unseen subset, limits)
 - [ ] T010 [US1] `tools/measure_bird_accuracy.py` per contracts/measurement.md steps 1–6 (standard library; environments'
-  Pythons; logs in `OUT_DIR/logs/`; plain messages); classes from `examples/birds/project.yaml` (`non-bird` last)
+  Pythons with `wren.runner.PINNED` in their environment, as export and package; logs in `OUT_DIR/logs/`; plain messages); classes from `examples/birds/project.yaml` (`non-bird` last)
 - [ ] T011 [US1] Run the measurement; copy `accuracy.json` to `examples/birds/test/accuracy.json`
 - [ ] T012 [US1] `audiomoth/docs/VERIFICATION.md` §9: replace the old figures with `accuracy.md`'s (overall, per species
   with counts, float vs device with interval, false detections, unseen subset), the method (bundle, call-finding,
   bootstrap), the limits (FR-008: xeno-canto training overlap except the unseen subset; same recordings as the
-  calibration clips at other times; species below 5 recordings not meaningful), the removed analogue-chain rows and why
+  calibration clips at other times; species below 5 recordings not meaningful, naming them — today *Emberiza cia* and
+  *Poecile montanus*, 4 free recordings each, unless the bundle finds more), the removed analogue-chain rows and why
   (research R7), and the command that reproduces it
 - [ ] T013 [P] [US1] `audiomoth/firmware/bird/model/README.md` and `README.md` ("Measured so far"): the new headline
   figures with a link to §9; no old figure presented as current (SC-004)
