@@ -107,16 +107,17 @@ synthetic sounds.
 - [ ] T013 [P] [US1] Create `wren/tfside/birdnet.py` (`python wren/tfside/birdnet.py BIRDNET_DIR GRID_DIR INDICES_JSON
   OUT_DIR`): `ai_edge_litert.interpreter.Interpreter` on `audio-model.tflite`, one window at a time (input [1, 144000]),
   sigmoid of the logits; writes `teacher.npz` with `file_sha256`, `start`, `confidence` (the project species' columns,
-  class order), `top_index`, `top_confidence` (data-model.md); prints the count and seconds
+  class order), `top_name` (scientific name of the most confident label overall), `top_confidence` (data-model.md);
+  prints the count and seconds
 - [ ] T014 [US1] `wren/stages/data.py` `train()`: when `p.training["birdnet"]`: sub-folder `train/birdnet/` with its own
   key `stage_key("birdnet-1", sorted sha256 of the training files' source audio (from `prepare/files_train.json`
-  paths), hop, the species mapping, birdnet.FILES)` — no paths, times or prepare key (research R8). If up to date,
+  paths; cached in `train/birdnet/hashes.json` by path, size and mtime), hop, the species mapping, birdnet.FILES)` — no
+  paths, times or prepare key in the key (research R8). If up to date,
   reuse it (BirdNET need not be installed: SC-006); else if `birdnet.ready()` run `r.torch("birdnet_windows", …)` then
   `r.tf("birdnet", …)`, write `mapping.json` (data-model.md), delete `windows.f32`, mark done; else stop before
   training: "BirdNET is needed for the new training audio: run python -m wren setup --birdnet". Add that key and
   `code("torchside/birdnet_target.py")` to the train key; pass `"birdnet_teacher": str(out / "birdnet" /
-  "teacher.npz")`, the label names (`labels/en_us.txt` or the mapping, for the report) and the weight, temperature and
-  gamma in the train spec. With the option off the train key and spec are exactly as before (SC-005)
+  "teacher.npz")` and the weight, temperature and gamma in the train spec. With the option off the train key and spec are exactly as before (SC-005)
 - [ ] T015 [US1] `wren/runner.py` `LABELS`: `birdnet_windows` → "preparing the training audio for BirdNET",
   `birdnet` → "asking BirdNET what it hears in the training audio"
 - [ ] T016 [US1] `wren/torchside/train.py`: when the spec has `birdnet_teacher`: load `teacher.npz`; map each training
@@ -164,7 +165,8 @@ synthetic sounds.
   in its own layer after `--tflm`
 - [ ] T024 `.github/workflows/ci.yml`: add `tests/test_birdnet.py` to the docker job's unit checks; add a docker step
   "Learning from BirdNET end to end" running `tests/make_bird_dataset.py runs/bird_data` and
-  `tests/birds_birdnet/project.yaml`; add the refusal run of `tests/synthetic/project_birdnet.yaml` (expects a non-zero
+  `tests/birds_birdnet/project.yaml`, then the same project again with `third_party/birdnet` moved away inside the
+  container and `--stages train --force` (SC-006: must succeed from the stored results); add the refusal run of `tests/synthetic/project_birdnet.yaml` (expects a non-zero
   exit and the three names in the output)
 - [ ] T025 Option-off check (SC-005): `tests/test_training.py`, the pytest unit checks, the synthetic end to end and
   `tests/test_birds_reproduction.sh` pass as on `main` (package files identical to `main`'s native output); before the
