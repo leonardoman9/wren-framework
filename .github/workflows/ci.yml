@@ -55,6 +55,14 @@ jobs:
           && .venv-torch/bin/python -m wren run tests/birds_birdnet/project.yaml --stages train --force"
       - name: Bird model accuracy (byte for byte, examples/birds/test/accuracy.json)
         run: docker run --rm -v "$PWD/runs:/wren/runs" --entrypoint sh wren tests/test_bird_accuracy.sh
+      - name: Bird model accuracy result (to update the reference when the measurement changes on purpose)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bird-accuracy
+          path: |
+            runs/bird-accuracy/accuracy.json
+            runs/bird-accuracy/accuracy.md
       - name: Bird model reproduction (byte for byte, package and firmware)
         run: docker run --rm -v "$PWD/runs:/wren/runs" --entrypoint sh wren tests/test_birds_reproduction.sh
       - name: Bird conversion intermediates (to locate a byte difference between hosts)
