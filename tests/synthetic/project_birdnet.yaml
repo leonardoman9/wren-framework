@@ -1,0 +1,8 @@
+# The synthetic sounds with learning from BirdNET turned on: must be refused in the project check (specs/003-birdnet-
+# distillation, User Story 2), naming downsweep, trill and upsweep. Data: python tests/make_synthetic_dataset.py runs/synth_data
+name: test-synthetic-birdnet
+data:
+  root: ../../runs/synth_data
+  negative: background
+training:
+  birdnet: true

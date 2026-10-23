@@ -5,3 +5,4 @@ __pycache__/
 .DS_Store
 audiomoth/third_party/tflite-micro/
 .pytest_cache/
+third_party/

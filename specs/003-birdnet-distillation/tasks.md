@@ -16,10 +16,10 @@ bird end-to-end project. Test tasks come before the code they check.
 
 ## Phase 1: Setup
 
-- [ ] T001 Add `third_party/` to `.gitignore` and `.dockerignore` (research R3); and, before any code change, run the
+- [X] T001 Add `third_party/` to `.gitignore` and `.dockerignore` (research R3); and, before any code change, run the
   synthetic project on `main`'s code and save `runs/test-synthetic/train/{train.json,history.csv}` to the scratchpad as
   the SC-005 baseline used by T025
-- [ ] T002 Create `wren/birdnet.py` (standard library only; imported by `wren/setup.py` and `wren/config.py`): constants
+- [X] T002 Create `wren/birdnet.py` (standard library only; imported by `wren/setup.py` and `wren/config.py`): constants
   `DIR = ROOT / "third_party" / "birdnet" / "v2.4"`, `ZIP_URL`, `ZIP_SHA256`, `FILES = {"audio-model.tflite": sha256,
   "labels/en_us.txt": sha256}` (values from data-model.md), `MODEL_NAME = "BirdNET v2.4 GLOBAL 6K (Zenodo 15050749)"`,
   `LICENCE = "CC BY-NC 4.0"`, `CITATION = "Kahl et al. (2021), Ecological Informatics 61:101236"`; `ready()` (the marker
@@ -33,14 +33,14 @@ bird end-to-end project. Test tasks come before the code they check.
 
 ## Phase 2: Foundational (blocks both stories)
 
-- [ ] T003 `wren/setup.py`: `install_birdnet()` per contracts/setup-birdnet.md: skip if `birdnet.ready()`; else download
+- [X] T003 `wren/setup.py`: `install_birdnet()` per contracts/setup-birdnet.md: skip if `birdnet.ready()`; else download
   `ZIP_URL` with `urllib` to a temporary file in `third_party/birdnet/`, check `ZIP_SHA256`, extract only the two
   files, check their sha256, write the marker last, delete the zip; on any failure remove partial files, no marker,
   plain message, non-zero exit; print the licence and citation lines. `main(..., birdnet=False)` calls it; `report()`
   adds the row "Learning from BirdNET (optional)" (ready / "run python -m wren setup --birdnet"), not required for
   "Ready"
-- [ ] T004 `wren/cli.py`: `--birdnet` flag on `setup`, passed to `wren_setup.main`; usage line updated
-- [ ] T005 `wren/config.py`: `TRAINING_DEFAULTS` gains `"birdnet": False, "birdnet_weight": 0.5, "birdnet_temperature":
+- [X] T004 `wren/cli.py`: `--birdnet` flag on `setup`, passed to `wren_setup.main`; usage line updated
+- [X] T005 `wren/config.py`: `TRAINING_DEFAULTS` gains `"birdnet": False, "birdnet_weight": 0.5, "birdnet_temperature":
   4.0, "birdnet_species": {}` (so `KNOWN["training"]` accepts them); in a convert project any `training.birdnet*` key is
   an error "training.birdnet: only for training projects (data:)"
 
@@ -55,7 +55,7 @@ bird end-to-end project. Test tasks come before the code they check.
 **Independent Test**: `python -m wren run tests/synthetic/project_birdnet.yaml` stops within seconds naming the three
 synthetic sounds.
 
-- [ ] T006 [P] [US2] Tests in `tests/test_birdnet.py` (pytest, a 12-line fake labels file in `tmp_path`, `birdnet.DIR`
+- [X] T006 [P] [US2] Tests in `tests/test_birdnet.py` (pytest, a 12-line fake labels file in `tmp_path`, `birdnet.DIR`
   monkeypatched; no download): `match` accepts `Bubo_bubo`, `bubo bubo`, a mapping `{tawny_owl: Strix aluco}`, and
   reports `upsweep`, `trill` as unmatched; the background folder is never matched; `config.load` on a synthetic-style
   project with `birdnet: true` fails listing every unmatched sound and the `birdnet_species` hint; missing BirdNET →
@@ -64,7 +64,7 @@ synthetic sounds.
   with no BirdNET installed → no error and no BirdNET mention; BirdNET not installed but a `mapping.json` covering every
   sound folder in the run folder → accepted (indices from the mapping); a `mapping.json` missing one folder → "stored
   results do not cover" message
-- [ ] T007 [US2] `wren/config.py`: with `training.birdnet` true, run the checks of contracts/project-yaml.md in the
+- [X] T007 [US2] `wren/config.py`: with `training.birdnet` true, run the checks of contracts/project-yaml.md in the
   project check (before any stage), in this order: `loss`, `birdnet_weight` in [0, 1], `birdnet_temperature` > 0,
   `birdnet_species` keys are sound folders; then, if `birdnet.ready()`, `birdnet.match` on the class folders with the
   labels file; else, if `birdnet.stored_mapping(p.run_dir)` exists, take the indices from it (every sound folder must be
@@ -72,9 +72,9 @@ synthetic sounds.
   messages exactly as in the contract (plain words, no "distillation"); store the matched label indices in
   `p.training["birdnet_indices"]` for the train stage; default `loss` becomes `focal` when `birdnet` is true and `loss`
   was not given
-- [ ] T008 [P] [US2] `tests/synthetic/project_birdnet.yaml`: the synthetic project (`tests/synthetic/project.yaml`) with
+- [X] T008 [P] [US2] `tests/synthetic/project_birdnet.yaml`: the synthetic project (`tests/synthetic/project.yaml`) with
   `training: {birdnet: true}` and name `test-synthetic-birdnet`, with a comment that it must be refused (US2)
-- [ ] T009 [US2] Run `pytest tests/test_birdnet.py` and `python -m wren run tests/synthetic/project_birdnet.yaml` (must
+- [X] T009 [US2] Run `pytest tests/test_birdnet.py` and `python -m wren run tests/synthetic/project_birdnet.yaml` (must
   stop in the project check, in under 30 s, naming `downsweep`, `trill`, `upsweep`: SC-001)
 
 **Checkpoint**: commit "Learning from BirdNET: setup and the bird-species check".

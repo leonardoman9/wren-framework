@@ -53,6 +53,9 @@ class Project:
 
 TRAINING_DEFAULTS = {"init": "wrennet", "epochs": 40, "batch_size": 32, "lr": 5.0e-4, "negative_share": 0.4, "loss": "ce",
                      "focal_gamma": 2.0, "augment": True, "seed": 0, "device": "auto", "patience": 8, "warmup_epochs": 2}
+# learning from BirdNET (specs/003-birdnet-distillation): off unless asked; only in p.training when on, so projects that
+# do not use it train exactly as before
+BIRDNET_DEFAULTS = {"birdnet": False, "birdnet_weight": 0.5, "birdnet_temperature": 4.0, "birdnet_species": {}}
 
 
 KNOWN = {  # every key project.yaml may contain: a misspelled key must not silently fall back to a default
@@ -61,7 +64,7 @@ KNOWN = {  # every key project.yaml may contain: a misspelled key must not silen
     "data": {"root", "train", "validation", "test", "negative", "names", "group", "split", "windows"},
     "data.split": {"validation", "test", "seed"},
     "data.windows": {"hop_seconds", "max_per_file", "negative_max_per_file"},
-    "training": set(TRAINING_DEFAULTS),
+    "training": set(TRAINING_DEFAULTS) | set(BIRDNET_DEFAULTS),
     "calibration": {"audio", "count", "eval"},
     "test": {"audio", "windows"},
     "device": {"window_start", "window_minutes", "hop_seconds", "confidence"},
@@ -87,6 +90,43 @@ def name_problem(n):
     if not all(32 <= ord(c) < 127 for c in n): return "printable ASCII only"
     if any(c in n for c in '"\\,'): return "no quotes, backslashes or commas"
     return None
+
+
+def birdnet_checks(p, given, folders, negative):
+    """Learning from BirdNET (specs/003-birdnet-distillation, contracts/project-yaml.md): only for bird species BirdNET
+    knows. Fills p.training's birdnet keys and the matched species; returns the problems, in plain words."""
+    from wren import birdnet
+    b = {**BIRDNET_DEFAULTS, **{k: v for k, v in given.items() if k in BIRDNET_DEFAULTS}}
+    errors = []
+    if "loss" in given and given["loss"] != "focal":
+        errors.append("Learning from BirdNET uses the focal loss; remove 'loss: ce' (or set birdnet: false).")
+    p.training["loss"] = "focal"
+    try: weight, temperature = float(b["birdnet_weight"]), float(b["birdnet_temperature"])
+    except (TypeError, ValueError): weight, temperature = -1.0, 0.0
+    if not 0 <= weight <= 1: errors.append("training.birdnet_weight: a number from 0 to 1")
+    if not temperature > 0: errors.append("training.birdnet_temperature: a number above 0")
+    mapping = b["birdnet_species"] or {}
+    sounds = [f for f in folders if f != negative]
+    errors += [f"training.birdnet_species: '{k}' is not one of your sound folders" for k in mapping if k not in sounds]
+    if errors: return errors
+    if birdnet.ready():
+        matched, unmatched = birdnet.match(folders, negative, mapping, birdnet.labels())
+        if unmatched:
+            return ["Learning from BirdNET works only for bird species BirdNET knows. Not found: "
+                    + ", ".join(f"'{f}'" for f in unmatched) + ". Name each folder after its scientific name, or give it "
+                    f"under training: birdnet_species (e.g. {unmatched[0]}: Turdus merula)."]
+    else:
+        stored = birdnet.stored_mapping(p.run_dir)
+        if stored is None:
+            return ["Learning from BirdNET needs BirdNET on this computer: run python -m wren setup --birdnet"]
+        missing = [f for f in sounds if f not in stored or stored[f]["name"].lower() != birdnet.scientific(f, mapping).lower()]
+        if missing:
+            return ["BirdNET's stored results do not cover " + ", ".join(f"'{f}'" for f in missing)
+                    + ": run python -m wren setup --birdnet"]
+        matched = {f: stored[f] for f in sounds}
+    p.training.update(birdnet=True, birdnet_weight=weight, birdnet_temperature=temperature,
+                      birdnet_species={f: matched[f] for f in sounds})
+    return []
 
 
 def default_name(folder):
@@ -131,12 +171,16 @@ def load(path):
                   "split": {"validation": 0.15, "test": 0.15, "seed": 0, **(d.get("split") or {})},
                   "windows": {"hop_seconds": 1.5, "max_per_file": 6, "negative_max_per_file": 40, **(d.get("windows") or {})}}
         if p.data["group"] not in ("file", "subfolder"): errors.append("data.group: file or subfolder")
-        p.training = {**TRAINING_DEFAULTS, **(raw.get("training") or {})}
+        given = raw.get("training") or {}
+        p.training = {**TRAINING_DEFAULTS, **{k: v for k, v in given.items() if k not in BIRDNET_DEFAULTS}}
         if p.training["init"] not in ("wrennet", "scratch"): errors.append("training.init: wrennet or scratch")
         if p.training["loss"] not in ("ce", "focal"): errors.append("training.loss: ce or focal")
+        if given.get("birdnet"): errors += birdnet_checks(p, given, folders, negative)
         p.checkpoint = p.run_dir / "train" / "best.pt"
     else:
         p.checkpoint = rel(raw["checkpoint"])
+        if any(k in BIRDNET_DEFAULTS for k in raw.get("training") or {}):
+            errors.append("training.birdnet: only for training projects (data:)")
         if "classes" not in raw: errors.append("missing 'classes' (names in the checkpoint's output order)")
         p.classes = [str(c) for c in raw.get("classes", [])]
         p.negative = str(raw.get("negative", "last"))

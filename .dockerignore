@@ -9,3 +9,4 @@ audiomoth/third_party/tflite-micro/
 .pytest_cache/
 audiomoth/**/out/
 audiomoth/**/out_*/
+third_party/
