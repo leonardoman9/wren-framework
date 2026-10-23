@@ -95,7 +95,7 @@ synthetic sounds.
   of species windows with every c < 0.1 gives exactly (1 − α)·focal, a background window with c all 0 keeps its KL
   term
 - [X] T011 [US1] Create `wren/torchside/birdnet_target.py` (torch only): `target(confidence [B, S], negative, K, T)` →
-  q [B, K] per contracts/teacher-target.md steps 1–3 (floor 1e-4); `mask(confidence, y, negative)` per step 4 (species
+  q [B, K] per contracts/teacher-target.md steps 1–3 (floor 1e-9); `mask(confidence, y, negative)` per step 4 (species
   window with every confidence < 0.1 → 0); `focal_distillation(logits, y, q, m, alpha, T, gamma)` per step 5 (KL averaged
   over the windows with m = 1), with the focal part identical to `loss_fn` in `wren/torchside/train.py` (move that function here and
   import it back, so both use one definition)

@@ -68,7 +68,7 @@ Measured on `main` at f302b9f (feature 002 merged), 2026-10-23.
 ## R6. The distillation target (spec FR-004a)
 
 - **Decision**: for a window, with c_i = sigmoid(logit) for the project's species i (in class order) and the background
-  class last: p = [c_1, …, c_S, Π_i (1 − c_i)], floored at 1e-4, normalised to sum 1; the soft target at temperature T
+  class last: p = [c_1, …, c_S, Π_i (1 − c_i)], floored at 1e-9 (planned as 1e-4, lowered in implementation: BirdNET's median confidence is ~5e-5, so 1e-4 flattened the target), normalised to sum 1; the soft target at temperature T
   is q = p^(1/T) / Σ p^(1/T) (the same as softmax(log p / T)). Without a background class (negative: none) p = c,
   normalised.
 - **Silent species windows** (spec FR-004a, analysis I1): on a window whose folder label is a species and whose
@@ -76,8 +76,8 @@ Measured on `main` at f302b9f (feature 002 merged), 2026-10-23.
   focal term keeps weight 1 − α), so a faint call is not pulled towards background. Background windows always use the
   KL term (BirdNET hearing a project species there is information, and is reported). The batch mean of the KL term
   divides by the number of windows that use it.
-- **Check** (computed for the spec): a 0.9 detection among 9 classes gives the species 4.95 × (T 3) / 3.92 × (T 4) the
-  uniform share; the original softmax(c / T) gave 1.29 × / 1.21 ×.
+- **Check** (computed for the spec, floor 1e-4): a 0.9 detection among 9 classes gives the species 4.95 × (T 3) / 3.92 × (T 4)
+  the uniform share (5.56 × at T 4 with the final 1e-9 floor); the original softmax(c / T) gave 1.29 × / 1.21 ×.
 
 ## R7. The loss (spec FR-004)
 
