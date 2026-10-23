@@ -50,7 +50,7 @@ class Runner:
     def run(self, name, cmd, env=None, cwd=None):
         """Runs cmd, writes its output to logs/<name>.log, returns the output; raises StepFailed on a non-zero exit."""
         e = dict(os.environ, PYTHONPATH=str(ROOT) + os.pathsep + os.environ.get("PYTHONPATH", ""),
-                 WRENNET_ROOT=str(ROOT / "wrennet"), **(PINNED if self.pinned else {}), **(env or {}))
+                 **(PINNED if self.pinned else {}), **(env or {}))
         cmd = [str(c) for c in cmd]
         label = LABELS.get(name, name.replace("_", " "))
         print(f"  - {label}", flush=True)

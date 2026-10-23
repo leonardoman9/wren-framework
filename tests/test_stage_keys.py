@@ -17,7 +17,7 @@ def project(tmp_path):
     (audio / "a.wav").write_bytes(b"one clip")
     (audio / "b.wav").write_bytes(b"another clip")
     (tmp_path / "project.yaml").write_text(yaml.safe_dump({
-        "name": "keys", "checkpoint": str(ROOT / "wrennet" / "best_distillation_model.pt"),
+        "name": "keys", "checkpoint": str(ROOT / "wrennet" / "checkpoints" / "birds.pt"),
         "classes": [f"class {i}" for i in range(9)], "negative": "last",
         "calibration": {"audio": [str(audio)], "count": 1, "eval": 1}, "runs": str(tmp_path / "runs")}))
     return config.load(tmp_path / "project.yaml"), audio

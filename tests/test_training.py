@@ -52,7 +52,7 @@ def prepare(root, spec_extra, out, expect_ok=True):
 tmp = Path(tempfile.mkdtemp(prefix="wren_test_"))
 try:
     # --- model ---------------------------------------------------------------------------------------------------
-    m = load_model(ROOT / "wrennet/best_distillation_model.pt"); core = Core(m).eval()
+    m = load_model(ROOT / "wrennet/checkpoints/birds.pt"); core = Core(m).eval()
     rng = np.random.default_rng(0)
     x = torch.from_numpy(np.stack([tone(3, [0.5], level=l, seed=i) for i, l in enumerate([0.001, 0.05, 0.3, 0.9])]))
     with torch.no_grad():

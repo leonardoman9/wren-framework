@@ -37,7 +37,7 @@ def fold_batchnorm(module, x):
     block, into the block's last CausalConv1d. A block with a residual connection does not end with that convolution,
     so each fold is kept only if the module's output on x is unchanged. Returns the number of folds."""
     import numpy as np
-    from birds_distillation_edge.models.legacy_modules import CausalConv1d
+    from wrennet.models.legacy_modules import CausalConv1d
     f64 = lambda t: t.detach().cpu().numpy().astype(np.float64)
     with torch.no_grad():
         expected = module(x)
