@@ -58,7 +58,8 @@ Measured on `main` at f302b9f (feature 002 merged), 2026-10-23.
   given, else the folder name with `_` read as a space; it must equal, ignoring case, the scientific name (the part
   before `_`) of exactly one line of `labels/en_us.txt`. All 8 species of the bird model are there (checked). The check
   runs in `wren/config.py` with the project check (seconds, stdlib), and lists every unmatched sound with the fix
-  ("name its scientific name under training: birdnet_species"). If the labels file is missing, the message says to run
+  ("name its scientific name under training: birdnet_species"). If BirdNET is not installed, the stored mapping of a
+  previous run is used instead (R8, contracts/project-yaml.md); with neither, the message says to run
   `python -m wren setup --birdnet`.
 - **Non-birds**: BirdNET v2.4 has a few non-bird classes (Dog, Engine, Human vocal, …) but no frogs (checked: *Hyla
   arborea*, *Rana temporaria* absent). Only scientific-name species lines are accepted, so "Dog" is not a valid project
@@ -94,7 +95,8 @@ Measured on `main` at f302b9f (feature 002 merged), 2026-10-23.
 - **Decision**: no new stage. The train stage gets one more step before training, "asking BirdNET about the training
   audio", cached in `runs/<name>/train/birdnet/` with its own key: the sha256 of every training file's source audio
   (content, not path or time), the grid step, the species mapping and BirdNET's files' sha256. The train key includes
-  that key, so a change of BirdNET, of the mapping or of the training audio retrains.
+  that key, so a change of BirdNET, of the mapping or of the training audio retrains. The files' sha256 are cached in
+  `train/birdnet/hashes.json` by path, size and modification time, so an unchanged dataset is not hashed again.
 - **Repeating without BirdNET** (spec SC-006, analysis I2): the prepare key holds absolute paths and modification times
   (`wren/runner.py` `listing`), so it changes on another computer; the BirdNET key does not, because it is built from
   file contents. `teacher.npz` stores, per grid row, the source file's sha256 and the start; `mapping.json` stores the

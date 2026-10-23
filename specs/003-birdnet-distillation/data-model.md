@@ -18,7 +18,8 @@
 
 ## BirdNET grid (`runs/<name>/train/birdnet/grid.json`, `windows.f32`)
 
-- One entry per 3 s window: `[file index, start sample at 32 kHz]` for every training file, starts `0, h, 2h, …` with
+- One entry per 3 s window: `[file_sha256, start sample at 32 kHz]` for every training file (file_sha256 = sha256 of
+  its source audio), starts `0, h, 2h, …` with
   `h = data.windows.hop_seconds × 32000`, up to `length − 96000` (prepare has already extended files shorter than 3 s
   to 3 s, so every file has at least one window).
 - `windows.f32`: the windows resampled to 48 kHz, `[n, 144000]` float32 (a work file; may be deleted after teacher.npz).
@@ -36,7 +37,8 @@ installed (it must cover every current sound folder, with the same names).
 | `file_sha256` | [n] str (64 hex) | sha256 of the training file's source audio (looked up by content, not by index) |
 | `start` | [n] int64 | start sample at 32 kHz in the prepared file |
 | `confidence` | [n, S] float32 | sigmoid(logit) of each project species, in class order without the background |
-| `top_index` | [n] int32 | BirdNET's most confident label overall (for the report) |
+| `top_name` | [n] str | scientific name of BirdNET's most confident label overall (for the report; stored by name so
+  the report needs no labels file) |
 | `top_confidence` | [n] float32 | its confidence |
 
 Plus `stage.json`: `{"key": …}` from the training files' sha256 (sorted), the grid step, the species mapping and the two
