@@ -16,13 +16,16 @@
 | scientific name | `training.birdnet_species[folder]`, else the folder name with `_` → space |
 | BirdNET index | the one label line whose scientific name equals it, ignoring case; none → error listing the sound |
 
-## BirdNET grid (`runs/<name>/train/birdnet/grid.json`, `windows.f32`)
+## BirdNET grid (`runs/<name>/train/birdnet/grid.json`, `audio48.raw`)
 
 - One entry per 3 s window: `[file_sha256, start sample at 32 kHz]` for every training file (file_sha256 = sha256 of
   its source audio), starts `0, h, 2h, …` with
   `h = data.windows.hop_seconds × 32000`, up to `length − 96000` (prepare has already extended files shorter than 3 s
   to 3 s, so every file has at least one window).
-- `windows.f32`: the windows resampled to 48 kHz, `[n, 144000]` float32 (a work file; may be deleted after teacher.npz).
+- `audio48.raw`: every training file resampled once to 48 kHz, int16 (1.5 × the prepared training audio; deleted
+  after teacher.npz is written). `grid.json` = `{"files": [{sha256, offset, length} at 48 kHz], "grid": [[file, start at
+  32 kHz], …]}`; the tf side cuts each 144,000-sample window from it. (Planned first as one float32 array of windows,
+  `windows.f32`: rejected during implementation, ~1.4 GB per hour of training audio.)
 
 ## Species mapping (`runs/<name>/train/birdnet/mapping.json`)
 
@@ -41,7 +44,8 @@ installed (it must cover every current sound folder, with the same names).
   the report needs no labels file) |
 | `top_confidence` | [n] float32 | its confidence |
 
-Plus `stage.json`: `{"key": …}` from the training files' sha256 (sorted), the grid step, the species mapping and the two
+Also `hashes.json` (path → size, mtime, sha256: the hash cache) and `indices.json` (BirdNET output index per project
+species). Plus `stage.json`: `{"key": …}` from the training files' sha256 (sorted), the grid step, the species mapping and the two
 BirdNET sha256 (research R8) — no paths or times, so the key is the same on another computer.
 
 ## Training target (in `train.py`, not stored)

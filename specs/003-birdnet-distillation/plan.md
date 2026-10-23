@@ -24,7 +24,8 @@ report states BirdNET's version, licence (CC BY-NC 4.0), α, T, γ and how far B
 resamples; setup uses the standard library (`urllib`, `zipfile`, `hashlib`)
 
 **Storage**: `third_party/birdnet/v2.4/{audio-model.tflite,labels/en_us.txt,.wren-birdnet}` (downloaded, gitignored);
-per run `runs/<name>/train/birdnet/{windows.f32,grid.json,teacher.npz,mapping.json,stage.json}`
+per run `runs/<name>/train/birdnet/{grid.json,teacher.npz,mapping.json,hashes.json,indices.json,stage.json}`
+(`audio48.raw` while BirdNET runs)
 
 **Testing**: new `tests/test_birdnet.py` (pytest: target, species matching, project-check refusals, loss; no download);
 `tests/make_bird_dataset.py` + `tests/birds_birdnet/project.yaml` (end to end with the option on, Docker CI job);

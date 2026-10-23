@@ -122,3 +122,60 @@ def test_stored_results_must_cover_every_sound(tmp_path, monkeypatch):
     stored(tmp_path, {"Bubo_bubo": {"name": "Bubo bubo", "index": 0}})
     msg = refusal(project(tmp_path, ["Bubo_bubo", "Apus_apus", "background"], {"birdnet": True}))
     assert "stored results do not cover 'Apus_apus'" in msg
+
+
+# ---------------------------------------------------------------- target and loss (contracts/teacher-target.md)
+
+torch = pytest.importorskip("torch")
+from wren.torchside.birdnet_target import focal, focal_distillation, mask, target  # noqa: E402
+
+K, NEG = 9, 8  # 8 species and the background, last as prepare orders them
+
+
+def conf(*values):
+    c = torch.zeros(1, K - 1)
+    c[0, :len(values)] = torch.tensor(values)
+    return c
+
+
+def test_confident_detection_dominates_the_target():
+    q = target(conf(0.9), NEG, K, 4.0)
+    assert float(q[0, 0]) >= 3 / K  # measured 3.92 / 9
+    original = torch.softmax(torch.cat([conf(0.9), torch.tensor([[0.1]])], 1) / 4.0, 1)  # the original project's target
+    assert float(original[0, 0]) < 1.3 / K
+
+
+def test_nothing_heard_points_to_background():
+    assert int(target(conf(), NEG, K, 4.0).argmax()) == NEG
+
+
+@pytest.mark.parametrize("t", [0.5, 1.0, 4.0, 10.0])
+def test_target_is_a_distribution(t):
+    q = target(torch.rand(5, K - 1), NEG, K, t)
+    assert torch.allclose(q.sum(1), torch.ones(5)) and bool((q > 0).all())
+
+
+def test_no_background_class():
+    c = torch.tensor([[0.6, 0.2]])
+    assert torch.allclose(target(c, -1, 2, 1.0), c / c.sum())
+
+
+def test_weight_zero_and_one():
+    torch.manual_seed(0)
+    z, y = torch.randn(4, K), torch.tensor([0, 3, 8, 5])
+    c = torch.rand(4, K - 1)
+    q, m = target(c, NEG, K, 4.0), torch.ones(4)
+    assert torch.allclose(focal_distillation(z, y, q, m, 0.0, 4.0, 2.0), focal(z, y, 2.0))
+    kl = (q * (q.log() - torch.log_softmax(z / 4.0, 1))).sum(1).mean()
+    assert torch.allclose(focal_distillation(z, y, q, m, 1.0, 4.0, 2.0), 16.0 * kl)
+
+
+def test_silent_species_windows_keep_their_folder_label():
+    z = torch.randn(2, K)
+    c = torch.full((2, K - 1), 0.05)  # BirdNET hears none of the project's species
+    y_species = torch.tensor([2, 4])
+    m = mask(c, y_species, NEG)
+    assert m.tolist() == [0.0, 0.0]
+    q = target(c, NEG, K, 4.0)
+    assert torch.allclose(focal_distillation(z, y_species, q, m, 0.5, 4.0, 2.0), 0.5 * focal(z, y_species, 2.0))
+    assert mask(torch.zeros(1, K - 1), torch.tensor([NEG]), NEG).tolist() == [1.0]  # a background window keeps BirdNET

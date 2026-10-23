@@ -1,0 +1,12 @@
+# The same bird project WITHOUT learning from BirdNET, for the comparison (spec SC-003): the bird model's 8 species,
+# at most 10 recordings each, from the freely licensed calibration bundle; the other species' clips are the background.
+# Data: python tests/make_bird_dataset.py runs/bird_data      BirdNET: python -m wren setup --birdnet
+# Limits: these are calibration clips (3 s each); clips of one recording may fall in different splits.
+name: test-birds-plain
+data:
+  root: ../../runs/bird_data
+  negative: background
+training:
+  birdnet: false
+calibration: {count: 100, eval: 30}
+device: {window_start: "06:00", window_minutes: 5, hop_seconds: 3, confidence: 50}
