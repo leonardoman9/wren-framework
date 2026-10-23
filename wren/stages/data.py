@@ -3,7 +3,7 @@ Options: README.md (project.yaml). Outputs: runs/<name>/prepare/, train/ (best.p
 import json
 
 from wren.config import ROOT
-from wren.runner import code, listing, mark_done, stage_key, tree_hash, up_to_date
+from wren.runner import code, listing, mark_done, model_code, stage_key, up_to_date
 
 
 def _spec(dir_, name, spec):
@@ -33,14 +33,19 @@ def prepare(r, force=False):
     return out, key
 
 
+def train_key(prep_key, spec):
+    """The prepared windows, the settings, the training code, the starting checkpoint (by content) and the model code."""
+    return stage_key("train-1", prep_key, spec, code("torchside/train.py", "torchside/model.py", "torchside/metrics.py"),
+                     ROOT / "wrennet" / "checkpoints" / "birds.pt", model_code())
+
+
 def train(r, prep_dir, prep_key, force=False):
     p = r.p
     out = p.run_dir / "train"
     out.mkdir(parents=True, exist_ok=True)
     spec = {"classes": p.classes, "negative": p.negative_index, **p.training,
             "wrennet_checkpoint": str(ROOT / "wrennet" / "checkpoints" / "birds.pt")}
-    key = stage_key("train-1", prep_key, spec, code("torchside/train.py", "torchside/model.py", "torchside/metrics.py"),
-                    ROOT / "wrennet" / "checkpoints" / "birds.pt", tree_hash(ROOT / "wrennet"))
+    key = train_key(prep_key, spec)
     if not force and up_to_date(out, key) and (out / "best.pt").exists():
         print("train: up to date"); return out, key
     print(f"train ({p.training['init']}, up to {p.training['epochs']} epochs)")

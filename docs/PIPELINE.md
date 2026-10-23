@@ -69,7 +69,7 @@ CPUs round the last bit differently. Each source was removed where it was found:
 | `tests/test_training.py` | prepare, window selection, splits, error paths, model loading |
 | `tests/test_setup.py` | `python -m wren setup` checks and messages, symlinked environments, idempotency |
 | `tests/test_examples.py` | no absolute or BioDCASE paths in any project; the calibration bundle's attribution and licences |
-| `tests/test_stage_keys.py` | a stage reruns when its audio (by content) or its conversion code changes |
+| `tests/test_stage_keys.py` | a stage reruns when its audio (by content), its conversion code or the model code (`wrennet/**/*.py`, `wren/torchside/model.py`) changes; READMEs and caches do not count |
 | `tests/test_layout.py` | `wrennet/` holds only the model package and the checkpoint; no old WrenNet paths; removed firmware files stay removed |
 | `tests/synthetic/project.yaml` | the whole chain, from synthetic audio to tested firmware |
 | `tests/minimal/project.yaml` | a project with only `data:` (every default) |

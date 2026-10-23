@@ -7,7 +7,7 @@ model.tflite (the int8 backbone) and quantize.json (int8 vs float error, operato
 import json
 
 from wren.config import ROOT
-from wren.runner import code, content, mark_done, need, stage_key, up_to_date
+from wren.runner import code, content, mark_done, model_code, need, stage_key, up_to_date
 
 T = ROOT / "wren" / "torchside"
 
@@ -27,7 +27,8 @@ def input_key(p):
                      content(p.reference_audio), p.trains and (prep / "stage.json").read_text(), p.trains and p.hop_seconds,
                      code("stages/export.py", "runner.py", "torchside/export_backbone.py", "torchside/make_specs.py",
                           "torchside/specs_from_windows.py", "torchside/reference.py", "torchside/run.py",
-                          "torchside/bird_model_export_check.py", "torchside/model.py", "tfside/quantize.py"))
+                          "torchside/bird_model_export_check.py", "torchside/model.py", "tfside/quantize.py"),
+                     model_code())
 
 
 def run(r, force=False):
