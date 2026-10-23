@@ -81,7 +81,7 @@ document.
 | `firmware/bird/map_sizes.py` | nothing | remove |
 | `firmware/bird/sweep_tail.py` | nothing (takes WRENNET_ROOT) | remove |
 | `tests/sim/check_wav.py` | nothing (not run by `scripts/run_tests.sh`) | remove |
-| `vendor/audiomoth/device/inc/efm32wg<part>.h`, 62 of 63 | `em_device.h` selects one by the `EFM32WG380F256` define (`build_app.sh`, `build_sim.sh`); the others are never included | remove all but `efm32wg380f256.h` (~19 MB) |
+| `vendor/audiomoth/device/inc/efm32wg<part>.h`, 63 of 64 | `em_device.h` selects one by the `EFM32WG380F256` define (`firmware/app/build_app.sh`); the others are never included | remove all but `efm32wg380f256.h` (~19 MB) |
 
 `em_device.h` is not edited: its `#elif` chain only includes the header of the defined part, and a build for another
 part fails on the missing header, which is the right outcome for firmware that only targets the AudioMoth.

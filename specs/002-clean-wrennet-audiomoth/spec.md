@@ -41,7 +41,7 @@ maintainer's review in the pull request.
   a link to the published datasheet), the unreferenced screenshot `docs/images/image.png`, `firmware/snippets/`,
   `tools/bird_frontend_v1_reference.c.txt`, and the unreferenced developer scripts `firmware/bird/host_test.c`,
   `firmware/bird/map_sizes.py`, `firmware/bird/sweep_tail.py`, `tests/sim/check_wav.py`. Also the EFM32 device
-  headers of the 62 microcontroller variants the AudioMoth does not have (19 MB of the vendored library; the board is
+  headers of the 63 microcontroller variants the AudioMoth does not have (19 MB of the vendored library; the board is
   an EFM32WG380F256).
 
 ## User Scenarios & Testing *(mandatory)*

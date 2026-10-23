@@ -11,7 +11,7 @@
 goes. The pipeline and the firmware's model scripts import the model from the repository (it is on `PYTHONPATH`
 already, and the scripts add the repository root themselves), so `WRENNET_ROOT` disappears as an environment
 variable and as a script argument. `audiomoth/` drops unreferenced files (datasheet PDF, screenshot, snippets, an old
-front-end reference, four developer scripts) and the device headers of the 62 EFM32 variants the AudioMoth does not
+front-end reference, four developer scripts) and the device headers of the 63 EFM32 variants the AudioMoth does not
 use. No conversion code, locked environment or committed reference output changes; the bird reproduction test is the
 proof.
 
