@@ -29,7 +29,7 @@ description: "Task list for feature 004: stages re-run when the model code chang
 ## Phase 3: Polish
 
 - [X] T007 `docs/PIPELINE.md`: the stage-key test row mentions the model code
-- [ ] T008 Push, open a pull request (not merged), confirm CI
+- [X] T008 Push, open a pull request (not merged), confirm CI
 
 ## Dependencies
 
