@@ -221,7 +221,8 @@ see [audiomoth/docs/FIRST_BOARD_TEST.md](audiomoth/docs/FIRST_BOARD_TEST.md).
 - **Bird calibration recordings** (`examples/birds/calibration/`): 3 s excerpts of xeno-canto recordings under CC0,
   CC BY or CC BY-SA. Each clip keeps its licence. The recordist, licence and source of every clip are listed in
   `ATTRIBUTION.csv`.
-- **WrenNet** model code and the bird model: `wrennet/`.
+- **WrenNet** model code and the bird model (`wrennet/checkpoints/birds.pt`): `wrennet/`. WrenNet's original training
+  and distillation code is in its own repository, [sciapponi/WrenNet](https://github.com/sciapponi/WrenNet).
 
 ## For developers
 
