@@ -38,8 +38,9 @@ existing checks unchanged (option off: training identical, SC-005)
 reproduction untouched: convert projects never reach the new code), the stage list is unchanged (R8)
 
 **Scale/Scope**: ~8 files edited (`wren/config.py`, `wren/setup.py`, `wren/stages/data.py`, `wren/stages/report.py`,
-`wren/torchside/train.py`, `wren/runner.py` labels, `docker/Dockerfile`, `.gitignore`/`.dockerignore`), 3 new modules
-(`wren/birdnet.py` stdlib helpers, `wren/torchside/birdnet_windows.py`, `wren/tfside/birdnet.py`), 3 test files, README,
+`wren/torchside/train.py`, `wren/runner.py` labels, `docker/Dockerfile`, `.gitignore`/`.dockerignore`), 4 new modules
+(`wren/birdnet.py` stdlib helpers, `wren/torchside/birdnet_windows.py`, `wren/torchside/birdnet_target.py`,
+`wren/tfside/birdnet.py`), 3 test files, README,
 `docs/PIPELINE.md`, CI
 
 ## Constitution Check
@@ -85,7 +86,8 @@ wren/stages/data.py              # train: birdnet steps + key; spec passes the t
 wren/runner.py                   # plain labels for the new steps
 wren/torchside/birdnet_windows.py  # new: prepared training audio -> 48 kHz windows on the grid
 wren/tfside/birdnet.py           # new: BirdNET (ai_edge_litert) -> teacher.npz (project-species confidences, top species)
-wren/torchside/train.py          # target (R6) and focal distillation loss (R7); birdnet block in train.json
+wren/torchside/birdnet_target.py  # new: target (R6) and focal distillation loss (R7), unit-tested
+wren/torchside/train.py          # uses them; birdnet block in train.json
 wren/stages/report.py            # plain summary line, technical rows, licence
 docker/Dockerfile                # RUN python -m wren setup --birdnet (own layer)
 .gitignore, .dockerignore        # third_party/

@@ -19,7 +19,7 @@
 ## BirdNET grid (`runs/<name>/train/birdnet/grid.json`, `windows.f32`)
 
 - One entry per 3 s window: `[file index, start sample at 32 kHz]` for every training file, starts `0, h, 2h, …` with
-  `h = data.windows.hop_seconds × 32000`, up to `length − 96000` (prepare has already looped files shorter than 3 s
+  `h = data.windows.hop_seconds × 32000`, up to `length − 96000` (prepare has already extended files shorter than 3 s
   to 3 s, so every file has at least one window).
 - `windows.f32`: the windows resampled to 48 kHz, `[n, 144000]` float32 (a work file; may be deleted after teacher.npz).
 
