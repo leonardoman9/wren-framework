@@ -13,13 +13,13 @@
 
 ## Requirement Completeness
 
-- [ ] No [NEEDS CLARIFICATION] markers remain
+- [x] No [NEEDS CLARIFICATION] markers remain
 - [x] Requirements are testable and unambiguous
 - [x] Success criteria are measurable
 - [x] Success criteria are technology-agnostic (no implementation details)
 - [x] All acceptance scenarios are defined
 - [x] Edge cases are identified
-- [ ] Scope is clearly bounded
+- [x] Scope is clearly bounded
 - [x] Dependencies and assumptions identified
 
 ## Feature Readiness
@@ -31,4 +31,4 @@
 
 ## Notes
 
-- Two open questions (FR-002 test audio source, FR-003 non-bird windows) decide the scope; see the unchecked items.
+- Test audio (FR-002) and non-bird windows (FR-003) settled with the maintainer on 2026-10-23.

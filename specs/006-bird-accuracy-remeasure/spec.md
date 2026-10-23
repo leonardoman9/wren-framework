@@ -30,6 +30,14 @@ cia* and *Poecile montanus*).
 
 - Q: Where do the figures go? → A: They replace §9 of `audiomoth/docs/VERIFICATION.md` and the model package README's
   accuracy line; the old figures stay in git history, and the new section says what changed in the method.
+- Q: Which audio is the test set, given that only 6 free recordings of the 8 species are not already in the calibration
+  bundle? → A: The free recordings of the calibration bundle (and the few others), using 3 s windows that do not
+  overlap the calibration clips. Calibration only sets the int8 ranges and never sees labels, so the bias is small; it
+  is stated in the limits. Recordings uploaded to xeno-canto after WrenNet's training data was collected are also
+  reported as a separate subset, the only one certainly unseen in training.
+- Q: Non-bird windows? → A: Yes. The test set includes windows with no bird (wind, rain, quiet, site noise) from CC0
+  audio, so the "non-bird" class and false detections are measured. The source (CC0 Freesound recordings, or the
+  stretches without calls of the free recordings, found by the pipeline's call-finding) is chosen in planning.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -83,10 +91,12 @@ repository (or fetched by a checksum-verified tool), and in the Docker image the
 
 - **FR-001**: The test audio MUST be freely licensed (CC0, CC BY, CC BY-SA), with one attribution row per clip, and
   MUST contain no BioDCASE audio.
-- **FR-002**: The test audio MUST come from [NEEDS CLARIFICATION: only 6 free recordings of the 8 species are not
-  already in the calibration bundle. Which audio is the test set?]
-- **FR-003**: The test set MUST [NEEDS CLARIFICATION: include non-bird windows (so the "non-bird" class and false
-  detections are measured), or only the 8 species as before?]
+- **FR-002**: The species test windows MUST come from the free recordings of the 8 species (the calibration bundle's
+  and any others), and MUST NOT overlap any calibration clip in time. Recordings uploaded after WrenNet's training data
+  was collected MUST also be reported as a separate subset.
+- **FR-003**: The test set MUST include non-bird windows from CC0 audio, and the measurement MUST report the
+  false-detection rate: the share of non-bird windows the model assigns to a species, overall and above the device's
+  confidence threshold.
 - **FR-004**: The measurement MUST report, for the float model and the device version: accuracy, macro-F1, per-species
   recall and precision, the confusion matrix, and the number of windows and recordings, with intervals computed per
   recording.
@@ -97,7 +107,8 @@ repository (or fetched by a checksum-verified tool), and in the Docker image the
 - **FR-007**: §9 of `audiomoth/docs/VERIFICATION.md` and the model package README MUST show the new figures, the
   method, the audio's source and the limits, and MUST no longer present the old figures as current.
 - **FR-008**: The documentation MUST state that WrenNet's training data came from xeno-canto and that overlap with the
-  test recordings cannot be excluded unless the test recordings are newer than the training data, and which applies.
+  test recordings cannot be excluded except for the subset uploaded after the training data was collected, and that the
+  species windows come from the same recordings as the calibration clips (different times).
 
 ### Key Entities
 
