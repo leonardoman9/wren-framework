@@ -143,7 +143,7 @@ feature 001 and is re-run, not rewritten.
 - [X] T028 [P] Update `audiomoth/docs/VERIFICATION.md` mentions of the old checkpoint path, removed files or WrenNet's
   `tools/` where they describe how to run things now (results stay as measured)
 - [X] T029 Run quickstart.md steps 1–4 (synthetic end to end included); fix what fails
-- [ ] T030 Push the branch and open a pull request (not merged: the maintainer reviews the decisions marked in
+- [X] T030 Push the branch and open a pull request (not merged: the maintainer reviews the decisions marked in
   spec.md Clarifications); confirm the three CI jobs pass (SC-002), including the Docker byte-exact reproduction
 
 ---
