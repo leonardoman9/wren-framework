@@ -3,7 +3,9 @@ Usage: python -m wren.torchside.prepare SPEC.json OUT_DIR
 
 SPEC.json (written by wren/stages/data.py): classes (folder names, label order, negative last), negative (index or -1),
 sources ({"root": dir} or {"train": dir, "validation": dir|null, "test": dir|null}), split {validation, test, seed},
-group (file|subfolder), windows {hop_seconds, max_per_file, negative_max_per_file}.
+group (file|subfolder), windows {hop_seconds, max_per_file, negative_max_per_file}. A split ratio of exactly 0 carves
+nothing for that split and allows it to stay empty (every file in train: the bird accuracy measurement,
+specs/006-bird-accuracy-remeasure); ratios above 0 carve at least one group.
 
 Outputs in OUT_DIR, per split (train, validation, test):
   audio_<split>.raw     every file once: int16, 32 kHz, mono, 48 Hz high-pass as on the device; short files extended
@@ -52,6 +54,13 @@ def group_of(path, class_dir):
 # --- 1. files per split and class ---------------------------------------------------------------------------------
 src = spec["sources"]
 by_split = {s: {c: [] for c in classes} for s in ("train", "validation", "test")}
+EMPTY_OK = {s for s in ("validation", "test") if spec["split"][s] == 0 and not src.get(s)}  # ratio 0: none carved
+
+
+def carve(ratio, groups):
+    return 0 if ratio == 0 else max(1, round(ratio * groups))
+
+
 if "root" in src:
     rnd = random.Random(spec["split"]["seed"])
     for c in classes:
@@ -61,9 +70,9 @@ if "root" in src:
         keys = sorted(groups)
         rnd.shuffle(keys)
         g = len(keys)
-        if g < 5:
+        if g < 5 and len(EMPTY_OK) < 2:
             errors.append(f"class '{c}': {g} {'files' if spec['group'] == 'file' else 'groups'}, at least 5 are needed"); continue
-        n_test = max(1, round(spec["split"]["test"] * g)); n_val = max(1, round(spec["split"]["validation"] * g))
+        n_test = carve(spec["split"]["test"], g); n_val = carve(spec["split"]["validation"], g)
         for i, k in enumerate(keys):
             s = "test" if i < n_test else "validation" if i < n_test + n_val else "train"
             by_split[s][c] += groups[k]
@@ -88,14 +97,14 @@ else:
         groups = defaultdict(list)
         for f in by_split["train"][c]: groups[group_of(f, cdir)].append(f)
         keys = sorted(groups); rnd.shuffle(keys)
-        n_val = max(1, round(spec["split"]["validation"] * len(keys)))
-        n_test = max(1, round(spec["split"]["test"] * len(keys))) if carve_test else 0
+        n_val = carve(spec["split"]["validation"], len(keys))
+        n_test = carve(spec["split"]["test"], len(keys)) if carve_test else 0
         by_split["test"][c] = by_split["test"][c] if not carve_test else [f for k in keys[:n_test] for f in groups[k]]
         by_split["validation"][c] = [f for k in keys[n_test:n_test + n_val] for f in groups[k]]
         by_split["train"][c] = [f for k in keys[n_test + n_val:] for f in groups[k]]
 for s in by_split:
     for c in classes:
-        if not by_split[s][c]: errors.append(f"class '{c}' has no files in the {s} split")
+        if not by_split[s][c] and s not in EMPTY_OK: errors.append(f"class '{c}' has no files in the {s} split")
 if errors: sys.exit("prepare: " + "\n  ".join(errors))
 
 # --- 2. exact duplicates: across splits or classes they would inflate the test score ------------------------------
@@ -288,6 +297,7 @@ for s in ("train", "validation", "test"):
 # --- 4. report and checks -----------------------------------------------------------------------------------------
 per_class = {}
 for (s, c), st in stats.items():
+    if s in EMPTY_OK and st["files"] == 0: continue
     bw = [b for b in st["bandwidth"] if b == b]
     per_class.setdefault(c, {})[s] = {"files": st["files"], "minutes": round(st["seconds"] / 60, 2), "windows": st["windows"],
                                       "sample_rates": dict(st["sample_rates"]), "median_bandwidth_hz": round(float(np.median(bw)), 0) if bw else None,

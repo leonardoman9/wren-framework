@@ -14,7 +14,7 @@ Steps (logs in `OUT_DIR/logs/`):
 3. `wren.torchside.windows_ref OUT/prepare train wrennet/checkpoints/birds.pt OUT/ref.npz 1000000 0` (all windows).
 4. `cc -O2 -shared -fPIC` `bird_frontend.c` and `bird_tail.c` with `-I audiomoth/firmware/bird/model/generated`.
 5. `wren.tfside.device_eval OUT/ref.npz audiomoth/firmware/bird/model/bird_backbone_int8.tflite libfe libtail 9
-   OUT/device_eval.json --windows OUT/windows.npz` (per-window labels, float and int8 probabilities).
+   OUT/device_eval.json OUT/windows.npz` (per-window labels, float and int8 logits).
 6. `wren.torchside.accuracy` → `OUT/accuracy.json`, `OUT/accuracy.md` (data-model.md); each window's recording from
    `ref.npz` `names` (`XC<id>_<k>.flac@<s>s` / `FS<id>.flac@<s>s`: the `XC<id>` / `FS<id>` prefix), `uploaded` from
    `ATTRIBUTION.csv`, the confidence threshold from `examples/birds/project.yaml` (`device.confidence`).

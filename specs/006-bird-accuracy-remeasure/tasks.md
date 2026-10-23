@@ -14,20 +14,20 @@ byte-exact rerun in Docker; the bundle's licences in `tests/test_examples.py`.
 
 ## Phase 1: Setup
 
-- [ ] T001 Confirm the keys in `~/.wren-keys` (`XC_API_KEY`, `FREESOUND_API_KEY`) and BirdNET (`python -m wren setup
+- [X] T001 Confirm the keys in `~/.wren-keys` (`XC_API_KEY`, `FREESOUND_API_KEY`) and BirdNET (`python -m wren setup
   --check`); never write the keys into the repository or a log
 
 ---
 
 ## Phase 2: Foundational (blocks both stories)
 
-- [ ] T002 `wren/torchside/prepare.py`: a split ratio of exactly 0 means no files for that split, in both carving paths
+- [X] T002 `wren/torchside/prepare.py`: a split ratio of exactly 0 means no files for that split, in both carving paths
   (sources `root`, and `train` given explicitly): no `max(1, …)` carving and no "no files in the … split" / "no
   readable files" / "no windows" error for that split; the "at least 5 groups" check stays for ratios above 0 only.
   Ratios above 0 unchanged. Update the module docstring
-- [ ] T003 [P] `wren/tfside/device_eval.py`: optional 7th argument `WINDOWS.npz`: write `labels`, `float_logits`,
+- [X] T003 [P] `wren/tfside/device_eval.py`: optional 7th argument `WINDOWS.npz`: write `labels`, `float_logits`,
   `int8_logits` per window (research R2); without it, output exactly as before
-- [ ] T004 Run `.venv-torch/bin/python tests/test_training.py` and the synthetic project's `prepare,train` (T002 must not
+- [X] T004 Run `.venv-torch/bin/python tests/test_training.py` and the synthetic project's `prepare,train` (T002 must not
   change training: same `train.json`/`history.csv` as `main`, timings aside)
 
 **Checkpoint**: commit "prepare: ratio 0 keeps all files in train; device_eval: per-window output".
