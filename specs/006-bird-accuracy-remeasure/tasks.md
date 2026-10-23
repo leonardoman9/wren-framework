@@ -86,11 +86,11 @@ byte-exact rerun in Docker; the bundle's licences in `tests/test_examples.py`.
 
 **Independent Test**: quickstart.md step 5.
 
-- [ ] T014 [US2] `tests/test_bird_accuracy.sh`: checks `SHA256SUMS`, runs `tools/measure_bird_accuracy.py`, compares the
+- [X] T014 [US2] `tests/test_bird_accuracy.sh`: checks `SHA256SUMS`, runs `tools/measure_bird_accuracy.py`, compares the
   new `accuracy.json` with `examples/birds/test/accuracy.json`: identical in Docker (`WREN_PATH=docker`); natively prints
   the differing figures and passes when all are within 0.002
-- [ ] T015 [US2] Run the measurement twice natively: identical outputs (FR-006); run `tests/test_bird_accuracy.sh`
-- [ ] T016 [US2] `.github/workflows/ci.yml`: `tests/test_measure.py` in the unit checks; a docker step "Bird model
+- [X] T015 [US2] Run the measurement twice natively: identical outputs (FR-006); run `tests/test_bird_accuracy.sh`
+- [X] T016 [US2] `.github/workflows/ci.yml`: `tests/test_measure.py` in the unit checks; a docker step "Bird model
   accuracy (byte for byte)" running `tests/test_bird_accuracy.sh`. If the Docker result differs from the native one,
   the committed `accuracy.json` becomes the Docker one (constitution V: Docker is the reference) and §9 is regenerated
   from it
@@ -101,7 +101,7 @@ byte-exact rerun in Docker; the bundle's licences in `tests/test_examples.py`.
 
 - [X] T017 [P] `docs/PIPELINE.md`: the measurement in the tests table and a "Bird model accuracy" pointer to §9; the
   BirdNET comparison section names the new bundle as the set for a future comparison
-- [ ] T018 Option-off checks: `tests/test_training.py`, the pytest unit checks and `tests/test_birds_reproduction.sh`
+- [X] T018 Option-off checks: `tests/test_training.py`, the pytest unit checks and `tests/test_birds_reproduction.sh`
   pass as on `main` (package files identical to `main`'s native output)
 - [ ] T019 Push, open a pull request (not merged), confirm the three CI jobs pass
 
