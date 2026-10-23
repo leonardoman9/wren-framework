@@ -70,13 +70,19 @@ Measured on `main` at f302b9f (feature 002 merged), 2026-10-23.
   class last: p = [c_1, …, c_S, Π_i (1 − c_i)], floored at 1e-4, normalised to sum 1; the soft target at temperature T
   is q = p^(1/T) / Σ p^(1/T) (the same as softmax(log p / T)). Without a background class (negative: none) p = c,
   normalised.
+- **Silent species windows** (spec FR-004a, analysis I1): on a window whose folder label is a species and whose
+  confidences for every project species are below 0.1, the KL term is masked out for that window (its weight is 0, the
+  focal term keeps weight 1 − α), so a faint call is not pulled towards background. Background windows always use the
+  KL term (BirdNET hearing a project species there is information, and is reported). The batch mean of the KL term
+  divides by the number of windows that use it.
 - **Check** (computed for the spec): a 0.9 detection among 9 classes gives the species 4.95 × (T 3) / 3.92 × (T 4) the
   uniform share; the original softmax(c / T) gave 1.29 × / 1.21 ×.
 
 ## R7. The loss (spec FR-004)
 
 - **Decision**: in `wren/torchside/train.py`, with the option on:
-  `loss = (1 − α) · mean_focal(logits, y; γ) + α · T² · KL(q ‖ softmax(logits / T))` (batch mean), defaults α 0.5,
+  `loss = (1 − α) · mean_focal(logits, y; γ) + α · T² · KL(q ‖ softmax(logits / T))` (KL averaged over the windows
+  that use it, R6), defaults α 0.5,
   T 4, γ 2 (`focal_gamma`). This is the original `FocalDistillationLoss` with the corrected target (R6). The focal part
   reuses the existing `loss_fn`. Validation loss, model selection and early stopping stay on cross-entropy and macro-F1
   of the folder labels (FR-005).
@@ -86,15 +92,27 @@ Measured on `main` at f302b9f (feature 002 merged), 2026-10-23.
 ## R8. Where in the pipeline (constitution stage list unchanged)
 
 - **Decision**: no new stage. The train stage gets one more step before training, "asking BirdNET about the training
-  audio", cached in `runs/<name>/train/birdnet/` with its own key (prepare key, BirdNET files' sha256, species mapping,
-  grid). The train key includes that key, so a change of BirdNET or of the mapping retrains. Steps: `birdnet_windows`
+  audio", cached in `runs/<name>/train/birdnet/` with its own key: the sha256 of every training file's source audio
+  (content, not path or time), the grid step, the species mapping and BirdNET's files' sha256. The train key includes
+  that key, so a change of BirdNET, of the mapping or of the training audio retrains.
+- **Repeating without BirdNET** (spec SC-006, analysis I2): the prepare key holds absolute paths and modification times
+  (`wren/runner.py` `listing`), so it changes on another computer; the BirdNET key does not, because it is built from
+  file contents. `teacher.npz` stores, per grid row, the source file's sha256 and the start; `mapping.json` stores the
+  folder → scientific name → BirdNET index mapping and BirdNET's sha256. On a computer without BirdNET: the project
+  check accepts the option when `mapping.json` exists and covers every current sound folder (instead of reading the
+  labels file); the train stage reuses `teacher.npz` when its key matches, and otherwise stops before training with
+  "BirdNET is needed for the new training audio: run python -m wren setup --birdnet". Prepare must give the same
+  training files (same recordings and split seed); it re-runs on the new computer, which is fine because the teacher is
+  looked up by file content and start, not by prepare's file index. Steps: `birdnet_windows`
   (torch env: cut and resample) → `birdnet` (tf env: run the model, write `teacher.npz`) → `train` (torch env).
 - **Rationale**: the constitution fixes the stage list (prepare → … → report); BirdNET only serves training.
 
 ## R9. Report (spec FR-006)
 
-- **Decision**: `train.json` gets a `birdnet` block (model, licence, α, T, γ, windows analysed, per species: training
-  windows and the share whose largest target class is the folder label, plus the background windows BirdNET gives a
+- **Decision**: `train.json` gets a `birdnet` block (model, licence, α, T, γ, windows analysed, and per species on the
+  listed training windows: BirdNET's top species among all 6,522 is the folder's species / another project species /
+  a species outside the project, with the three most frequent other species; the share whose largest target class is
+  the folder's class; the windows with BirdNET's part skipped (R6); plus the background windows BirdNET gives a
   project species above 0.5). `wren/stages/report.py` prints a plain line in the summary ("Learned from BirdNET v2.4 as
   well as from your folders; BirdNET agreed with your folders on 87 % of the training windows") and the rest under
   "Technical details", with the licence line.
@@ -103,9 +121,10 @@ Measured on `main` at f302b9f (feature 002 merged), 2026-10-23.
 
 - **Decision**: `tests/make_bird_dataset.py OUT` builds a bird project from the committed calibration bundle
   (CC0/BY/BY-SA, no BioDCASE): the 8 model species' clips in species folders, one subfolder per recording; the clips
-  of the other 62 species as `background` ("none of the project's species"). `tests/birds_birdnet/project.yaml` trains
-  on it with the option on. 8–32 clips per species; `data.group: file` (4 recordings for two species are too few to
-  keep whole recordings in each split), noted as a limit of the comparison.
+  of the other 62 species as `background` ("none of the project's species"). At most 10 recordings per species (the
+  10 lowest xeno-canto ids, so the choice is fixed), matching SC-003's "10 or fewer"; 4–10 recordings and 8–20 clips
+  per species. `tests/birds_birdnet/project.yaml` trains on it with the option on; `data.group: file` (4 recordings for
+  two species are too few to keep whole recordings in each split), noted as a limit of the comparison.
 - **SC-003**: the same project with the option off (`tests/birds_birdnet/project_off.yaml`) gives the comparison,
   recorded in the PR and in `docs/PIPELINE.md`; not a gate.
 - **Refusal (SC-001)**: `tests/synthetic` with `birdnet: true` must stop in the project check; a pytest case covers it

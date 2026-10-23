@@ -13,7 +13,10 @@ Prerequisites: `python -m wren setup --tflm` done; branch `003-birdnet-distillat
    → every stage passes; the report has the BirdNET line, licence and agreement per species.
 5. **Cache (SC-004)**: run step 4 again with `--stages train --force` → "asking BirdNET" is skipped (its results are
    reused), training runs.
+5b. **Without BirdNET (SC-006)**: move `third_party/birdnet` aside, run step 4's project with `--stages train,evaluate
+   --force` → training repeats with the stored results; move it back.
 6. **Comparison (SC-003)**: `python -m wren run tests/birds_birdnet/project_off.yaml --stages prepare,train,evaluate`
    → compare test macro-F1 with step 4; record both.
 7. **Option off unchanged (SC-005)**: `tests/test_training.py`, the synthetic project and the bird reproduction pass as
-   on `main`.
+   on `main`; the synthetic project's `train/train.json` (best epoch, metrics) and `train/history.csv` are identical to
+   those of a run on `main` on the same computer.

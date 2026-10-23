@@ -39,10 +39,20 @@ projects only, because BirdNET only knows birds (and a few other sound classes).
   is sound and stays; its teacher target was not: it passed BirdNET's confidences (independent values between 0 and 1,
   not a distribution) through softmax(confidence / T), which gives an almost uniform target (a 90 % BirdNET detection
   becomes ~13 % among 9 classes), and set "non-bird" by fixed rules (0.1, 0.3, 0.1 × other species). The new target is
-  a probability distribution over the project's classes: BirdNET's confidence for each project species, plus "non-bird"
-  as the confidence that none of them is present, normalised to sum 1, then softened by T (p^(1/T), renormalised).
+  a probability distribution over the project's classes: BirdNET's confidence for each project species, plus the
+  background class as the confidence that none of them is present, normalised to sum 1, then softened by T (p^(1/T), renormalised).
 - Q: Which defaults for α (BirdNET's share), T (temperature) and γ (focal)? → A: α 0.5, T 4, γ 2, the defaults of the
   original `FocalDistillationLoss`; γ 2 is also wren's existing `focal_gamma` default.
+- Q (analysis): BirdNET hears none of the project's species in a species window (a faint or distant call): should its
+  "background" opinion pull that window towards background? → A (decided by Claude at the maintainer's request): No.
+  On a species window where BirdNET's confidence for every project species is below 0.1, only the folder-label part of
+  the loss applies (BirdNET's part is skipped for that window); the report counts these windows per species.
+- Q (analysis): Can training be repeated on another computer without BirdNET? → A: Yes. BirdNET's results are stored
+  in the run with the species mapping and are tied to the training files by their content, not their path; a computer
+  without BirdNET reuses them as long as the training files are the same.
+- Q (analysis): Which agreement does the report give? → A: Both, per species: how often BirdNET's top species among
+  all it knows is the folder's species (and how often it is another species, inside or outside the project), and how
+  often the training target's largest class is the folder's class.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -95,16 +105,19 @@ check with that message.
 
 ### Edge Cases
 
-- BirdNET hears nothing in a species window (a faint or distant call): the window keeps its folder label; BirdNET's
-  "nothing" does not override it.
+- BirdNET hears none of the project's species in a species window (a faint or distant call; every confidence below
+  0.1): only the folder label counts for that window; BirdNET's "nothing" does not pull it towards background. The
+  report counts these windows per species.
 - BirdNET hears a different species than the folder says (a second bird singing): the model learns both, weighted; the
   report counts how often this happened per species.
 - Background windows: BirdNET's opinion that a target species is present in a background window is reported (it may
   reveal a mislabelled background file).
 - BirdNET is not installed or cannot be downloaded: the pipeline stops with a plain message and how to install it,
   before any long step.
-- Training on another computer: BirdNET's results are stored with the run, so the training stage can be repeated
-  without BirdNET.
+- Training on another computer: BirdNET's results and the species mapping are stored with the run and tied to the
+  training files by content, so copying the run folder lets a computer without BirdNET repeat the training. If the
+  training files differ (new recordings, another split), the pipeline stops before training and says BirdNET is needed
+  for the new audio.
 
 ## Requirements *(mandatory)*
 
@@ -117,30 +130,37 @@ check with that message.
   `project.yaml`), and MUST stop with a plain message listing every unmatched sound otherwise.
 - **FR-003**: With the option on, BirdNET MUST analyse every 3 s window of the training set (not the validation or test
   windows, which are judged by folder labels only), and
-  its results MUST be stored in the run folder and reused while the windows and BirdNET's version do not change.
+  its results MUST be stored in the run folder with the species mapping, tied to the training files by content, and
+  reused while those files, the grid and BirdNET's version do not change, also on a computer without BirdNET.
 - **FR-004**: Training MUST use the focal distillation loss of the original WrenNet project: a focal loss on each
   window's folder label plus a distillation (KL divergence) loss towards BirdNET's opinion for the project's species and
-  for "no species of interest", combined as (1 − α) · focal + α · T² · KL with temperature T. α, T and the focal γ MUST
+  for the background class ("none of the project's species"), combined as (1 − α) · focal + α · T² · KL with temperature T. α, T and the focal γ MUST
   default to 0.5, 4 and 2 (the original `FocalDistillationLoss` defaults) and be overridable in `project.yaml`.
 - **FR-004a**: BirdNET's opinion of a window MUST become a probability distribution over the project's classes before
-  it is used as the target: per-species confidences plus a "non-bird" share for "none of the project's species",
+  it is used as the target: per-species confidences plus a background share for "none of the project's species",
   normalised to sum 1 and softened by T; the original project's softmax over raw confidences and its fixed "non-bird"
-  values MUST NOT be used. A unit test MUST show that a 90 % BirdNET detection gives that species at least three times
+  values MUST NOT be used. On a species window where every project species' confidence is below 0.1, the BirdNET part
+  of the loss MUST be skipped for that window (only the folder label counts). A unit test MUST show that a 90 % BirdNET detection gives that species at least three times
   the uniform share (1/N) of the target at the default T, where the original target gave 1.2–1.3 times.
 - **FR-005**: Model selection (best epoch) and the quality gates MUST keep using the folder labels only, so a model
   that copies BirdNET's mistakes is not rewarded (constitution, Pipeline & Quality Gates).
-- **FR-006**: The report MUST state that the model learned from BirdNET, BirdNET's version and licence, α, T and γ, and per species how often BirdNET's top species agreed with the folder label on the training windows.
+- **FR-006**: The report MUST state that the model learned from BirdNET, BirdNET's version and licence, α, T and γ, and
+  per species on the training windows: how often BirdNET's top species (among all it knows) is the folder's species,
+  how often it is another species, how often the training target's largest class is the folder's class, and how many
+  windows had BirdNET's part skipped (FR-004a).
 - **FR-007**: User-facing text (YAML option, messages, report) MUST describe the option in plain words ("learn from
   BirdNET"), without the term "distillation" outside the technical details (constitution I).
-- **FR-008**: BirdNET MUST NOT be needed to convert a model, to run a project with the option off, or to build the
-  firmware; only training with the option on needs it.
-- **FR-009**: Test coverage MUST include the refusal path (non-bird sounds) and a bird project with the option on that
+- **FR-008**: BirdNET MUST NOT be needed to convert a model, to run a project with the option off, to build the
+  firmware, or to repeat a training whose BirdNET results are already stored for the same training files; only asking
+  BirdNET about new training audio needs it.
+- **FR-009**: Test coverage MUST include the refusal path (sounds that are not birds) and a bird project with the option on that
   runs to the firmware, using only freely licensed audio (no BioDCASE).
 
 ### Key Entities
 
 - **BirdNET opinion of a window**: for one 3 s training window, BirdNET's confidence for each of the project's species
-  and for "none of them"; stored per run, tied to the window and to BirdNET's version.
+  and for the background; stored per run, tied to the window (training file content and position) and to BirdNET's
+  version.
 - **Species match**: the mapping from each project sound to a BirdNET species (scientific name), checked before
   training.
 
@@ -148,15 +168,17 @@ check with that message.
 
 ### Measurable Outcomes
 
-- **SC-001**: A non-bird project with the option on stops in under 30 seconds with a message that names every
+- **SC-001**: A project whose sounds are not birds, with the option on, stops in under 30 seconds with a message that names every
   unmatched sound.
 - **SC-002**: A bird project with the option on completes every stage, and its firmware passes every check.
 - **SC-003**: On a bird project with few recordings per species (10 or fewer), the model that learned from BirdNET
-  scores at least as well on the test windows (macro-F1) as the same project trained without it; the comparison is
-  reported, not assumed.
+  scores at least as well on the test windows (macro-F1) as the same project trained without it. This is measured
+  and reported, not a gate: a worse result is reported as such (constitution VI) and does not block the feature.
 - **SC-004**: A second run with unchanged recordings does not ask BirdNET again.
 - **SC-005**: Projects with the option off produce the same training results as before this feature (same settings,
-  same computer).
+  same computer): identical `train.json` best epoch and metrics and identical `history.csv`.
+- **SC-006**: With BirdNET removed from a computer, a run folder that already holds BirdNET's results repeats its
+  training to the end.
 
 ## Assumptions
 

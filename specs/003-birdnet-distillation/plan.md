@@ -9,7 +9,9 @@
 A training option `training: birdnet: true` makes the train stage ask BirdNET v2.4 what it hears in the training audio
 (3 s windows on prepare's grid, resampled to 48 kHz) and train WrenNet with the original project's focal distillation
 loss, (1 − α)·focal + α·T²·KL, against a corrected teacher target: BirdNET's confidences for the project's species plus
-a "none of them" share, normalised and softened by T (research R6). BirdNET is the official v2.4 TFLite model from
+a background share, normalised and softened by T, skipped on species windows where BirdNET hears none of the project's
+species (research R6). BirdNET's results are keyed by the training files' content, so a computer without BirdNET can
+repeat the training from a copied run folder (R8). BirdNET is the official v2.4 TFLite model from
 Zenodo, fetched by `python -m wren setup --birdnet` and run with `ai_edge_litert`, already in the locked tf environment:
 no new package and no lock change. The project check refuses the option when a sound is not a BirdNET species. The
 report states BirdNET's version, licence (CC BY-NC 4.0), α, T, γ and how far BirdNET agreed with the folders.
@@ -22,7 +24,7 @@ report states BirdNET's version, licence (CC BY-NC 4.0), α, T, γ and how far B
 resamples; setup uses the standard library (`urllib`, `zipfile`, `hashlib`)
 
 **Storage**: `third_party/birdnet/v2.4/{audio-model.tflite,labels/en_us.txt,.wren-birdnet}` (downloaded, gitignored);
-per run `runs/<name>/train/birdnet/{windows.f32,grid.json,teacher.npz,stage.json}`
+per run `runs/<name>/train/birdnet/{windows.f32,grid.json,teacher.npz,mapping.json,stage.json}`
 
 **Testing**: new `tests/test_birdnet.py` (pytest: target, species matching, project-check refusals, loss; no download);
 `tests/make_bird_dataset.py` + `tests/birds_birdnet/project.yaml` (end to end with the option on, Docker CI job);

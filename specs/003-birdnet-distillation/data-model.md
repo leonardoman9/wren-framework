@@ -23,21 +23,30 @@
   to 3 s, so every file has at least one window).
 - `windows.f32`: the windows resampled to 48 kHz, `[n, 144000]` float32 (a work file; may be deleted after teacher.npz).
 
+## Species mapping (`runs/<name>/train/birdnet/mapping.json`)
+
+`{"birdnet_sha256": {...FILES}, "species": {"<folder>": {"name": "<Scientific name>", "index": <BirdNET output index>}}}`
+for every sound folder except the background. Written with the teacher; read by the project check when BirdNET is not
+installed (it must cover every current sound folder, with the same names).
+
 ## Teacher file (`runs/<name>/train/birdnet/teacher.npz`)
 
 | Array | Shape | Meaning |
 |-------|-------|---------|
-| `grid` | [n, 2] int64 | file index, start sample (as grid.json) |
+| `file_sha256` | [n] str (64 hex) | sha256 of the training file's source audio (looked up by content, not by index) |
+| `start` | [n] int64 | start sample at 32 kHz in the prepared file |
 | `confidence` | [n, S] float32 | sigmoid(logit) of each project species, in class order without the background |
 | `top_index` | [n] int32 | BirdNET's most confident label overall (for the report) |
 | `top_confidence` | [n] float32 | its confidence |
 
-Plus `stage.json`: `{"key": …}` from prepare's key, the two BirdNET sha256, the species mapping and the grid step.
+Plus `stage.json`: `{"key": …}` from the training files' sha256 (sorted), the grid step, the species mapping and the two
+BirdNET sha256 (research R8) — no paths or times, so the key is the same on another computer.
 
 ## Training target (in `train.py`, not stored)
 
-For a drawn window (file fi, start s after jitter): the grid entry of fi nearest to s → c (S values) → p = [c…,
-Π(1 − c)] (background last; without background p = c) → floor 1e-4 → normalise → q = p^(1/T), normalised. Classes are
+For a drawn window (training file fi, its source sha256 h, drawn start s): the row with file h and the start nearest
+to s → c (S values) → p = [c…, Π(1 − c)] (background last; without background p = c) → floor 1e-4 → normalise →
+q = p^(1/T), normalised. Mask m = 0 when the folder label is a species and max(c) < 0.1, else 1 (research R6). Classes are
 in the order of `classes` (background last, as prepare orders them).
 
 ## `train.json` additions
@@ -45,6 +54,8 @@ in the order of `classes` (background last, as prepare orders them).
 ```json
 "birdnet": {"model": "BirdNET v2.4 GLOBAL 6K (Zenodo 15050749)", "licence": "CC BY-NC 4.0",
             "weight": 0.5, "temperature": 4.0, "focal_gamma": 2.0, "grid_windows": 2400,
-            "agreement": {"<class>": {"windows": 120, "agree": 0.87}},
+            "per_class": {"<class>": {"windows": 120, "birdnet_top_is_folder": 0.81, "birdnet_top_other_project": 0.06,
+                                      "birdnet_top_outside_project": 0.13, "other_top": ["Poecile palustris", "…"],
+                                      "target_top_is_folder": 0.87, "skipped": 9}},
             "background_with_species": {"windows": 310, "above_0_5": 4}}
 ```

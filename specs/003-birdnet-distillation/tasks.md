@@ -16,14 +16,18 @@ bird end-to-end project. Test tasks come before the code they check.
 
 ## Phase 1: Setup
 
-- [ ] T001 Add `third_party/` to `.gitignore` and `.dockerignore` (research R3)
+- [ ] T001 Add `third_party/` to `.gitignore` and `.dockerignore` (research R3); and, before any code change, run the
+  synthetic project on `main`'s code and save `runs/test-synthetic/train/{train.json,history.csv}` to the scratchpad as
+  the SC-005 baseline used by T025
 - [ ] T002 Create `wren/birdnet.py` (standard library only; imported by `wren/setup.py` and `wren/config.py`): constants
   `DIR = ROOT / "third_party" / "birdnet" / "v2.4"`, `ZIP_URL`, `ZIP_SHA256`, `FILES = {"audio-model.tflite": sha256,
   "labels/en_us.txt": sha256}` (values from data-model.md), `MODEL_NAME = "BirdNET v2.4 GLOBAL 6K (Zenodo 15050749)"`,
   `LICENCE = "CC BY-NC 4.0"`, `CITATION = "Kahl et al. (2021), Ecological Informatics 61:101236"`; `ready()` (the marker
   `.wren-birdnet` lists both sha256), `labels(path=None)` (scientific names in output order, the part before `_`),
   `match(folders, negative, mapping, labels)` → `(indices, unmatched)` per research R5: scientific name =
-  `mapping[folder]` else folder with `_` → space; equal ignoring case to exactly one label; background excluded
+  `mapping[folder]` else folder with `_` → space; equal ignoring case to exactly one label; background excluded;
+  `stored_mapping(run_dir)` → the `species` dict of `runs/<name>/train/birdnet/mapping.json` or `None`
+  (data-model.md)
 
 ---
 
@@ -57,10 +61,14 @@ synthetic sounds.
   project with `birdnet: true` fails listing every unmatched sound and the `birdnet_species` hint; missing BirdNET →
   the setup message; `loss: ce` + `birdnet: true` → the focal message; `birdnet_weight: 1.5` and
   `birdnet_temperature: 0` → their messages; `birdnet_species` naming a non-folder → its message; `birdnet: false`
-  with no BirdNET installed → no error and no BirdNET mention
+  with no BirdNET installed → no error and no BirdNET mention; BirdNET not installed but a `mapping.json` covering every
+  sound folder in the run folder → accepted (indices from the mapping); a `mapping.json` missing one folder → "stored
+  results do not cover" message
 - [ ] T007 [US2] `wren/config.py`: with `training.birdnet` true, run the checks of contracts/project-yaml.md in the
-  project check (before any stage), in this order: installed (`birdnet.ready()`), `loss`, `birdnet_weight` in [0, 1],
-  `birdnet_temperature` > 0, `birdnet_species` keys are sound folders, then `birdnet.match` on the class folders;
+  project check (before any stage), in this order: `loss`, `birdnet_weight` in [0, 1], `birdnet_temperature` > 0,
+  `birdnet_species` keys are sound folders; then, if `birdnet.ready()`, `birdnet.match` on the class folders with the
+  labels file; else, if `birdnet.stored_mapping(p.run_dir)` exists, take the indices from it (every sound folder must be
+  in it with the same scientific name, else the "stored results do not cover" message); else the setup message;
   messages exactly as in the contract (plain words, no "distillation"); store the matched label indices in
   `p.training["birdnet_indices"]` for the train stage; default `loss` becomes `focal` when `birdnet` is true and `loss`
   was not given
@@ -83,49 +91,61 @@ synthetic sounds.
   functions from `wren/torchside/birdnet_target.py`: 8 species + background, c = [0.9, 0, …], T = 4 → q[0] ≥ 3/9;
   c all 0 → argmax q is the background; q sums to 1 with no zero for T in {0.5, 1, 4, 10}; no background class →
   p = c normalised; α = 0 equals the focal loss of the same logits, α = 1 equals T²·KL only; for T = 4 the original
-  target softmax(c / T) gives q[0] < 1.3/9 (documents the fix)
+  target softmax(c / T) gives q[0] < 1.3/9 (documents the fix); the mask of contracts/teacher-target.md step 4: a batch
+  of species windows with every c < 0.1 gives exactly (1 − α)·focal, a background window with c all 0 keeps its KL
+  term
 - [ ] T011 [US1] Create `wren/torchside/birdnet_target.py` (torch only): `target(confidence [B, S], negative, K, T)` →
-  q [B, K] per contracts/teacher-target.md steps 1–3 (floor 1e-4); `focal_distillation(logits, y, q, alpha, T, gamma)`
-  per step 4, with the focal part identical to `loss_fn` in `wren/torchside/train.py` (move that function here and
+  q [B, K] per contracts/teacher-target.md steps 1–3 (floor 1e-4); `mask(confidence, y, negative)` per step 4 (species
+  window with every confidence < 0.1 → 0); `focal_distillation(logits, y, q, m, alpha, T, gamma)` per step 5 (KL averaged
+  over the windows with m = 1), with the focal part identical to `loss_fn` in `wren/torchside/train.py` (move that function here and
   import it back, so both use one definition)
 - [ ] T012 [P] [US1] Create `wren/torchside/birdnet_windows.py` (`python -m wren.torchside.birdnet_windows PREP_DIR
   HOP_SECONDS OUT_DIR`): for every file of `files_train.json`, 3 s windows of `audio_train.raw` at starts
   `0, h, 2h, … ≤ length − 96000` (h = hop × 32000), int16 → float, resampled 32 → 48 kHz with
-  `torchaudio.functional.resample`, written as `windows.f32` ([n, 144000] float32) and `grid.json` ([[file, start], …])
+  `torchaudio.functional.resample`, written as `windows.f32` ([n, 144000] float32) and `grid.json`
+  ([[file_sha256, start], …], where file_sha256 is the sha256 of the file's source audio at `files_train.json` `path`)
 - [ ] T013 [P] [US1] Create `wren/tfside/birdnet.py` (`python wren/tfside/birdnet.py BIRDNET_DIR GRID_DIR INDICES_JSON
   OUT_DIR`): `ai_edge_litert.interpreter.Interpreter` on `audio-model.tflite`, one window at a time (input [1, 144000]),
-  sigmoid of the logits; writes `teacher.npz` with `grid`, `confidence` (the project species' columns, class order),
-  `top_index`, `top_confidence` (data-model.md); prints the count and seconds
+  sigmoid of the logits; writes `teacher.npz` with `file_sha256`, `start`, `confidence` (the project species' columns,
+  class order), `top_index`, `top_confidence` (data-model.md); prints the count and seconds
 - [ ] T014 [US1] `wren/stages/data.py` `train()`: when `p.training["birdnet"]`: sub-folder `train/birdnet/` with its own
-  key `stage_key("birdnet-1", prep_key, birdnet.FILES, indices, hop, code("torchside/birdnet_windows.py",
-  "tfside/birdnet.py"))`; if not up to date run `r.torch("birdnet_windows", …)` then `r.tf("birdnet", …)`, delete
-  `windows.f32`, mark done; add that key and `code("torchside/birdnet_target.py")` to the train key; pass
-  `"birdnet_teacher": str(out / "birdnet" / "teacher.npz")` and the weight, temperature and gamma in the train spec.
-  With the option off the train key and spec are exactly as before (SC-005)
+  key `stage_key("birdnet-1", sorted sha256 of the training files' source audio (from `prepare/files_train.json`
+  paths), hop, the species mapping, birdnet.FILES)` — no paths, times or prepare key (research R8). If up to date,
+  reuse it (BirdNET need not be installed: SC-006); else if `birdnet.ready()` run `r.torch("birdnet_windows", …)` then
+  `r.tf("birdnet", …)`, write `mapping.json` (data-model.md), delete `windows.f32`, mark done; else stop before
+  training: "BirdNET is needed for the new training audio: run python -m wren setup --birdnet". Add that key and
+  `code("torchside/birdnet_target.py")` to the train key; pass `"birdnet_teacher": str(out / "birdnet" /
+  "teacher.npz")`, the label names (`labels/en_us.txt` or the mapping, for the report) and the weight, temperature and
+  gamma in the train spec. With the option off the train key and spec are exactly as before (SC-005)
 - [ ] T015 [US1] `wren/runner.py` `LABELS`: `birdnet_windows` → "preparing the training audio for BirdNET",
   `birdnet` → "asking BirdNET what it hears in the training audio"
-- [ ] T016 [US1] `wren/torchside/train.py`: when the spec has `birdnet_teacher`: load `teacher.npz`; per training file
-  the sorted grid starts and their confidence rows; in the loop, for each drawn `(fi, start)` (before augmentation
-  jitter is applied inside `augmented`, use the drawn start) take the row of the nearest grid start; loss =
-  `focal_distillation(logits, y, target(conf, neg, K, T), α, T, γ)`; validation loss, `evaluate_split`, model selection
-  and early stopping unchanged (FR-005). After training add to `train.json` the `birdnet` block of data-model.md:
-  agreement per class on the listed `windows_train.json` windows (argmax of the target == folder label), background
-  windows with any project species above 0.5 (count), model, licence, weight, temperature, gamma, grid size. Update the
-  module docstring (SPEC keys, choices)
+- [ ] T016 [US1] `wren/torchside/train.py`: when the spec has `birdnet_teacher`: load `teacher.npz`; map each training
+  file (`files_train.json`) to its rows by the sha256 of its source audio, sorted by start (a file with no rows: stop
+  with a plain message); in the loop, for each drawn `(fi, start)` (the drawn start, before the jitter inside
+  `augmented`) take the row with the nearest start; loss = `focal_distillation(logits, y, target(conf, neg, K, T),
+  mask(conf, y, neg), α, T, γ)`; validation loss, `evaluate_split`, model selection and early stopping unchanged
+  (FR-005). After training add to `train.json` the `birdnet` block of data-model.md, per class on the listed
+  `windows_train.json` windows: BirdNET's top species among all its labels is the folder's / another project species /
+  outside the project (with the three most frequent other species by name), the target's largest class is the folder's
+  class, windows skipped by the mask; plus background windows with any project species above 0.5; model, licence,
+  weight, temperature, gamma, grid size. Update the module docstring (SPEC keys, choices)
 - [ ] T017 [US1] `wren/stages/report.py`: if `train.json` has `birdnet`, the summary gets "- **Learned from:** your
-  folders and BirdNET v2.4 (BirdNET agreed with your folders on N % of the training windows); BirdNET's licence is
-  CC BY-NC 4.0 (non-commercial), which may also apply to this model" and the technical rows get the model, α, T, γ,
-  per-class agreement and the background count; no "distillation" in the summary
+  folders and BirdNET v2.4 (BirdNET named your folder's species on N % of the training windows); BirdNET's licence is
+  CC BY-NC 4.0 (non-commercial), which may also apply to this model" and the technical rows get the model, α, T, γ, a
+  per-class table (BirdNET top = folder / other project species / outside the project with the most frequent names,
+  target top = folder, skipped windows) and the background count; no "distillation" in the summary
 - [ ] T018 [P] [US1] Create `tests/make_bird_dataset.py OUT` (standard library + `csv`, copies files): from
-  `examples/birds/calibration/ATTRIBUTION.csv`, the 8 model species' clips into `OUT/<Genus_species>/XC<id>/<clip>`
-  and the other species' clips into `OUT/background/XC<id>/<clip>`; refuses to overwrite a non-empty `OUT`
+  `examples/birds/calibration/ATTRIBUTION.csv`, the 8 model species' clips into `OUT/<Genus_species>/XC<id>/<clip>`,
+  at most 10 recordings per species (the 10 lowest xeno-canto ids: SC-003's "10 or fewer", fixed choice), and the
+  other species' clips into `OUT/background/XC<id>/<clip>`; refuses to overwrite a non-empty `OUT`
 - [ ] T019 [P] [US1] `tests/birds_birdnet/project.yaml` (name `test-birds-birdnet`, data root `../../runs/bird_data`,
   negative `background`, `group: file`, `training: {birdnet: true, epochs: 20}`, calibration/device as the synthetic
   project) and `project_off.yaml` (same, `birdnet: false`, name `test-birds-plain`), with a comment on the data's
   limits (calibration clips; clips of one recording may fall in different splits)
-- [ ] T020 [US1] Run quickstart.md steps 1, 4, 5, 6: setup --birdnet twice (second run downloads nothing), the bird
-  project end to end (every stage, firmware tests pass: SC-002), the cache (SC-004: "asking BirdNET" skipped on a
-  forced train), the comparison with the option off (SC-003, record both macro-F1)
+- [ ] T020 [US1] Run quickstart.md steps 1, 4, 5, 5b, 6: setup --birdnet twice (second run downloads nothing), the
+  bird project end to end (every stage, firmware tests pass: SC-002), the cache (SC-004: "asking BirdNET" skipped on a
+  forced train), training with `third_party/birdnet` moved aside (SC-006), the comparison with the option off (SC-003,
+  record both macro-F1; a worse result is reported, not hidden)
 
 **Checkpoint**: commit "Learning from BirdNET: teacher, focal distillation, report".
 
@@ -135,7 +155,8 @@ synthetic sounds.
 
 - [ ] T021 [P] `README.md`: the `training: birdnet*` options in the project.yaml reference (plain words), a short "Learning
   from BirdNET (birds only)" paragraph: what it does, `python -m wren setup --birdnet`, the licence and citation, the
-  species-name rule
+  species-name rule, and that a copied run folder can be retrained without BirdNET; no "distillation" in the README
+  (FR-007)
 - [ ] T022 [P] `docs/PIPELINE.md`: the train row (focal distillation from BirdNET, corrected target, α/T/γ), the BirdNET
   model and its pins in the pinned-things table, `tests/test_birdnet.py` and the two test projects in the tests table,
   and the SC-003 comparison measured in T020
@@ -146,7 +167,9 @@ synthetic sounds.
   `tests/birds_birdnet/project.yaml`; add the refusal run of `tests/synthetic/project_birdnet.yaml` (expects a non-zero
   exit and the three names in the output)
 - [ ] T025 Option-off check (SC-005): `tests/test_training.py`, the pytest unit checks, the synthetic end to end and
-  `tests/test_birds_reproduction.sh` pass as on `main` (package files identical to `main`'s native output)
+  `tests/test_birds_reproduction.sh` pass as on `main` (package files identical to `main`'s native output); before the
+  feature's changes, save `runs/test-synthetic/train/{train.json,history.csv}` from a run on `main` on this computer,
+  and check that the branch gives the same best epoch, metrics and `history.csv` (timings excluded)
 - [ ] T026 Push the branch, open a pull request (not merged), confirm the three CI jobs pass
 
 ---
