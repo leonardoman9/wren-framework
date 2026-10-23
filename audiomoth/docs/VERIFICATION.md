@@ -69,8 +69,11 @@ Periparus 19/24 -> 6, Poecile 17/24 -> 7: **8 species out of 8**, 76 % of window
 `examples/birds/test/` (`accuracy.json`; byte for byte in the Docker image, `tests/test_bird_accuracy.sh` in CI;
 specs/006-bird-accuracy-remeasure). It measures the package that ships (`model/bird_backbone_int8.tflite`, with the int8
 ranges of `examples/birds/calibration/`) through the firmware's own C front-end and tail.
+On a native install the same command gives the same picture with small differences (one call window of 637 can
+cross prepare's selection threshold, and the C code is built by another compiler): the headline figures agree within
+0.02; per-class figures of the small classes can move more.
 
-**Test audio.** 638 windows of 3 s from 99 recordings, all freely licensed, no BioDCASE:
+**Test audio.** 637 windows of 3 s from 99 recordings, all freely licensed, no BioDCASE:
 - the 8 species: every CC0 / CC BY / CC BY-SA xeno-canto recording, without the stretches the calibration bundle took
   from it (each calibration clip ± 1.5 s), at most 120 s per recording; windows chosen by the pipeline's own
   call-finding (`prepare`), not by loudness;
@@ -81,32 +84,32 @@ Intervals: 95 %, bootstrap over recordings (the windows of a recording move toge
 
 | | original model (PyTorch, float) | device (C front-end + int8 backbone + C tail) |
 |---|---|---|
-| accuracy, all windows | 40.1 % (31.8–48.9) | 44.8 % (36.2–53.8) |
-| macro-F1, 9 classes | 54.8 % (45.1–62.1) | 56.0 % (46.2–63.7) |
-| non-bird windows called a species | 84.8 % (75.4–92.5) | 75.1 % (63.1–86.1) |
-| ... with confidence ≥ 50 % | 53.8 % | 47.9 % |
+| accuracy, all windows | 40.0 % (31.6–48.7) | 44.3 % (35.4–53.4) |
+| macro-F1, 9 classes | 54.7 % (44.9–62.1) | 54.9 % (45.0–63.1) |
+| non-bird windows called a species | 84.8 % (75.4–92.5) | 75.4 % (63.1–86.7) |
+| ... with confidence ≥ 50 % | 53.8 % | 48.8 % |
 | species recordings uploaded after 2025-06-11 (certainly unseen in training): accuracy | 72.5 % (52.9–90.9) | 70.6 % (51.3–89.6) |
 
-Device − original, macro-F1: +1.2 points (-0.9 to +4.1): the int8 conversion and the C
+Device − original, macro-F1: +0.2 points (-1.9 to +2.4): the int8 conversion and the C
 code cost nothing measurable.
 
 | class | recordings | windows | recall (device) | precision (device) |
 |---|---|---|---|---|
 | Apus apus (fewer than 5 recordings: not meaningful) | 4 | 9 | 100.0 % | 52.9 % |
 | Bubo bubo | 9 | 46 | 82.6 % | 13.2 % |
-| Certhia brachydactyla | 10 | 80 | 57.5 % | 88.5 % |
+| Certhia brachydactyla | 10 | 80 | 56.2 % | 88.2 % |
 | Certhia familiaris | 6 | 21 | 66.7 % | 34.2 % |
-| Emberiza cia (fewer than 5 recordings: not meaningful) | 4 | 9 | 55.6 % | 83.3 % |
-| Lophophanes cristatus | 9 | 39 | 53.8 % | 95.5 % |
-| Periparus ater | 15 | 73 | 74.0 % | 64.3 % |
-| Poecile montanus (fewer than 5 recordings: not meaningful) | 4 | 19 | 73.7 % | 42.4 % |
-| non-bird | 38 | 342 | 24.9 % | 88.5 % |
+| Emberiza cia (fewer than 5 recordings: not meaningful) | 4 | 9 | 55.6 % | 62.5 % |
+| Lophophanes cristatus | 9 | 38 | 55.3 % | 95.5 % |
+| Periparus ater | 15 | 73 | 71.2 % | 65.0 % |
+| Poecile montanus (fewer than 5 recordings: not meaningful) | 4 | 19 | 73.7 % | 41.2 % |
+| non-bird | 38 | 342 | 24.6 % | 88.4 % |
 
 **Reading.**
 - **On bird calls the model works**: on the 15 species recordings it cannot have seen in training,
   71 % of the call windows get the right species on the device.
 - **False detections are the main limit**: 75 % of the windows without any bird are called a species,
-  48 % with confidence ≥ 50 %. Of the 342 non-bird windows, 237 are called *Bubo bubo*: wind, rain,
+  49 % with confidence ≥ 50 %. Of the 342 non-bird windows, 239 are called *Bubo bubo*: wind, rain,
   rivers and traffic carry most of their energy at the eagle owl's low frequencies (300–400 Hz). It is not a level
   effect (median −37 dBFS for both). A device at a windy or noisy site would report eagle owls often, which is also
   why the precision of *Bubo bubo* is low. The model's "non-bird" class was trained on other kinds of background: a

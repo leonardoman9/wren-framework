@@ -50,7 +50,7 @@
     "Lophophanes cristatus": {
       "meaningful": true,
       "recordings": 9,
-      "windows": 39
+      "windows": 38
     },
     "Periparus ater": {
       "meaningful": true,
@@ -73,10 +73,10 @@
       "float": {
         "accuracy": {
           "ci": [
-            0.3175,
-            0.4887
+            0.3162,
+            0.4874
           ],
-          "value": 0.4013
+          "value": 0.4003
         },
         "confusion": [
           [
@@ -140,7 +140,7 @@
             0,
             0,
             1,
-            22,
+            21,
             3,
             4,
             0
@@ -189,10 +189,10 @@
         "false_detection_confident": 0.538,
         "macro_f1": {
           "ci": [
-            0.4508,
-            0.6211
+            0.4486,
+            0.6213
           ],
-          "value": 0.5479
+          "value": 0.5468
         },
         "precision": {
           "Apus apus": 0.6,
@@ -200,7 +200,7 @@
           "Certhia brachydactyla": 0.8704,
           "Certhia familiaris": 0.3721,
           "Emberiza cia": 0.7143,
-          "Lophophanes cristatus": 0.9167,
+          "Lophophanes cristatus": 0.913,
           "Periparus ater": 0.6543,
           "Poecile montanus": 0.3784,
           "non-bird": 0.8525
@@ -211,7 +211,7 @@
           "Certhia brachydactyla": 0.5875,
           "Certhia familiaris": 0.7619,
           "Emberiza cia": 0.5556,
-          "Lophophanes cristatus": 0.5641,
+          "Lophophanes cristatus": 0.5526,
           "Periparus ater": 0.726,
           "Poecile montanus": 0.7368,
           "non-bird": 0.152
@@ -220,10 +220,10 @@
       "int8": {
         "accuracy": {
           "ci": [
-            0.3617,
-            0.5385
+            0.3537,
+            0.5336
           ],
-          "value": 0.4483
+          "value": 0.4427
         },
         "confusion": [
           [
@@ -263,8 +263,8 @@
             0,
             20,
             1,
-            46,
-            0,
+            45,
+            1,
             1,
             8,
             3,
@@ -282,25 +282,25 @@
             0
           ],
           [
-            3,
+            2,
             7,
             0,
             0,
-            1,
+            2,
             21,
-            3,
+            2,
             4,
             0
           ],
           [
-            7,
+            8,
             0,
             1,
             5,
             0,
             0,
-            54,
-            6,
+            52,
+            7,
             0
           ],
           [
@@ -315,64 +315,64 @@
             0
           ],
           [
-            237,
+            239,
             0,
             5,
             0,
             0,
             0,
-            10,
+            9,
             5,
-            85
+            84
           ]
         ],
         "false_detection": {
           "ci": [
-            0.6312,
-            0.861
+            0.631,
+            0.8665
           ],
-          "value": 0.7515
+          "value": 0.7544
         },
-        "false_detection_confident": 0.4795,
+        "false_detection_confident": 0.4883,
         "macro_f1": {
           "ci": [
-            0.4625,
-            0.6366
+            0.4497,
+            0.6311
           ],
-          "value": 0.5599
+          "value": 0.5487
         },
         "precision": {
           "Apus apus": 0.5294,
-          "Bubo bubo": 0.1324,
-          "Certhia brachydactyla": 0.8846,
+          "Bubo bubo": 0.1315,
+          "Certhia brachydactyla": 0.8824,
           "Certhia familiaris": 0.3415,
-          "Emberiza cia": 0.8333,
+          "Emberiza cia": 0.625,
           "Lophophanes cristatus": 0.9545,
-          "Periparus ater": 0.6429,
-          "Poecile montanus": 0.4242,
-          "non-bird": 0.8854
+          "Periparus ater": 0.65,
+          "Poecile montanus": 0.4118,
+          "non-bird": 0.8842
         },
         "recall": {
           "Apus apus": 1.0,
           "Bubo bubo": 0.8261,
-          "Certhia brachydactyla": 0.575,
+          "Certhia brachydactyla": 0.5625,
           "Certhia familiaris": 0.6667,
           "Emberiza cia": 0.5556,
-          "Lophophanes cristatus": 0.5385,
-          "Periparus ater": 0.7397,
+          "Lophophanes cristatus": 0.5526,
+          "Periparus ater": 0.7123,
           "Poecile montanus": 0.7368,
-          "non-bird": 0.2485
+          "non-bird": 0.2456
         }
       },
       "int8_minus_float_macro_f1": {
         "ci": [
-          -0.0091,
-          0.0412
+          -0.0188,
+          0.0241
         ],
-        "value": 0.012
+        "value": 0.0019
       },
       "recordings": 99,
-      "windows": 638
+      "windows": 637
     },
     "unseen": {
       "float": {
@@ -581,9 +581,9 @@
             5,
             0,
             0,
-            1,
+            2,
             9,
-            3,
+            2,
             0,
             0
           ],
@@ -625,18 +625,18 @@
         "false_detection_confident": null,
         "macro_f1": {
           "ci": [
-            0.5234,
+            0.5149,
             0.8629
           ],
-          "value": 0.5914
+          "value": 0.5825
         },
         "precision": {
           "Apus apus": 0.5,
           "Bubo bubo": 0.9474,
           "Certhia familiaris": 0.2857,
-          "Emberiza cia": 0.5,
+          "Emberiza cia": 0.3333,
           "Lophophanes cristatus": 1.0,
-          "Periparus ater": 0.5,
+          "Periparus ater": 0.5714,
           "Poecile montanus": 0.3333
         },
         "recall": {
@@ -651,10 +651,10 @@
       },
       "int8_minus_float_macro_f1": {
         "ci": [
-          -0.1194,
+          -0.1177,
           0.0
         ],
-        "value": -0.0607
+        "value": -0.0696
       },
       "recordings": 15,
       "windows": 51

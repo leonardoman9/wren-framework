@@ -228,7 +228,7 @@ see [audiomoth/docs/FIRST_BOARD_TEST.md](audiomoth/docs/FIRST_BOARD_TEST.md).
 | run | data | test macro-F1, call windows (original → device version) |
 |---|---|---|
 | `tests/synthetic` | 3 synthetic tonal "species" + background, trained from scratch | 1.000 → 1.000; firmware built and tested |
-| the shipped bird model | freely licensed test set (`examples/birds/test/`): 8 species from xeno-canto, sounds without birds from Freesound | 0.548 → 0.560; species recordings never seen in training: 71 % right; 75 % of windows without birds called a species |
+| the shipped bird model | freely licensed test set (`examples/birds/test/`): 8 species from xeno-canto, sounds without birds from Freesound | 0.547 → 0.549; species recordings never seen in training: 71 % right; 75 % of windows without birds called a species |
 
 **Limits:**
 - No real-species training data has been measured yet.
