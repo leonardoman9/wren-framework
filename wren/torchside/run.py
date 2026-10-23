@@ -1,8 +1,8 @@
 """Runs a conversion script with WrenNet's model loader replaced by wren's (any number of classes).
 Usage: python -m wren.torchside.run SCRIPT.py [ARGS...]
 
-The scripts import `bird_model_export_check` after putting their own folder (or WRENNET_ROOT/tools) on sys.path;
-a module already in sys.modules wins over both, so installing wren's stand-in first is enough.
+The scripts (export_backbone.py, make_specs.py, copied from WrenNet's tools/) import `bird_model_export_check`;
+a module already in sys.modules wins over any file of that name, so installing wren's stand-in first is enough.
 """
 import runpy
 import sys

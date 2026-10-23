@@ -9,7 +9,6 @@ import json
 import re
 import shutil
 
-from wren.config import ROOT
 from wren.runner import code, content, mark_done, need, sha256, stage_key, tree_hash, up_to_date
 
 
@@ -40,8 +39,7 @@ def run(r, export_dir, force=False):
     (gen / "bird_frontend_tables.h").write_text(tables)
 
     # GRU, projection, attention and classifier weights (int8 per row) and the frame count
-    r.torch("tail_weights", "-m", "wren.torchside.run", bird / "gen_bird_tail.py", ROOT / "wrennet",
-            p.checkpoint, export_dir / "reference.npz", work / "tail")
+    r.torch("tail_weights", bird / "gen_bird_tail.py", p.checkpoint, export_dir / "reference.npz", work / "tail")
     for f in ("bird_tail_weights_i8.h", "tail_dims.h"): shutil.copy(work / "tail" / f, gen / f)
 
     # backbone, classes and device settings
@@ -57,8 +55,7 @@ def run(r, export_dir, force=False):
         r.torch("test_reference", "-m", "wren.torchside.windows_ref", p.run_dir / "prepare", "test", p.checkpoint,
                 work / "e2e_ref.npz", max(p.test_windows, 2000), p.training["seed"])
     else:
-        r.torch("test_reference", "-m", "wren.torchside.run", bird / "e2e_make_ref.py", ROOT / "wrennet",
-                p.checkpoint, work / "e2e_ref.npz", p.test_windows, *p.test_audio)
+        r.torch("test_reference", bird / "e2e_make_ref.py", p.checkpoint, work / "e2e_ref.npz", p.test_windows, *p.test_audio)
     check = r.tf("pipeline_check", bird / "e2e_check.py", work / "e2e_ref.npz", out / "model.tflite", work / "libfe.so", work / "libtail.so")
     m = re.search(r"windows=(\d+) \| argmax agree=(\d+)/(\d+) \| logits max\|d\|=([\d.]+)", check)
     if not m: raise SystemExit("The check of the device version gave an unexpected result; details in logs/pipeline_check.log")

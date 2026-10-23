@@ -3,7 +3,7 @@
 # The int8 calibration and the device test windows use the committed calibration bundle: freely licensed xeno-canto
 # clips (calibration/README.md, ATTRIBUTION.csv).
 name: birds
-checkpoint: ../../wrennet/best_distillation_model.pt
+checkpoint: ../../wrennet/checkpoints/birds.pt
 
 # names in the model's OUTPUT order (for this checkpoint: allowed_bird_classes of its training config)
 classes: [Bubo bubo, Certhia familiaris, Apus apus, Certhia brachydactyla, Emberiza cia, Lophophanes cristatus,

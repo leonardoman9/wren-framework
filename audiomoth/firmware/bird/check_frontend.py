@@ -1,5 +1,5 @@
 """Compare bird_frontend.c with the PyTorch front-end on real audio (int16 PCM, as the AudioMoth delivers).
-Usage: python check_frontend.py WRENNET_ROOT CHECKPOINT.pt LIBFE FILE_OR_DIR [N] [CHUNK]
+Usage: python check_frontend.py CHECKPOINT.pt LIBFE FILE_OR_DIR [N] [CHUNK]
 """
 import ctypes, random, sys
 from pathlib import Path
@@ -9,11 +9,11 @@ import soundfile
 import torch
 import torchaudio
 
-root, ckpt, lib, src = Path(sys.argv[1]), Path(sys.argv[2]), sys.argv[3], Path(sys.argv[4])
-n_max = int(sys.argv[5]) if len(sys.argv) > 5 else 1
-chunk = int(sys.argv[6]) if len(sys.argv) > 6 else 512
-sys.path.insert(0, str(root / "tools"))
-from bird_model_export_check import SR, frontend, load_model  # noqa: E402
+ckpt, lib, src = Path(sys.argv[1]), sys.argv[2], Path(sys.argv[3])
+n_max = int(sys.argv[4]) if len(sys.argv) > 4 else 1
+chunk = int(sys.argv[5]) if len(sys.argv) > 5 else 512
+sys.path.insert(0, str(Path(__file__).resolve().parents[3]))  # the repository: wren's model loader
+from wren.torchside.model import SR, frontend, load_model  # noqa: E402
 
 m = load_model(ckpt)
 spec_mod = m.combined_log_linear_spec

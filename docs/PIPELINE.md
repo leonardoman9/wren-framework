@@ -70,6 +70,7 @@ CPUs round the last bit differently. Each source was removed where it was found:
 | `tests/test_setup.py` | `python -m wren setup` checks and messages, symlinked environments, idempotency |
 | `tests/test_examples.py` | no absolute or BioDCASE paths in any project; the calibration bundle's attribution and licences |
 | `tests/test_stage_keys.py` | a stage reruns when its audio (by content) or its conversion code changes |
+| `tests/test_layout.py` | `wrennet/` holds only the model package and the checkpoint; no old WrenNet paths; removed firmware files stay removed |
 | `tests/synthetic/project.yaml` | the whole chain, from synthetic audio to tested firmware |
 | `tests/minimal/project.yaml` | a project with only `data:` (every default) |
 | `tests/other_classes/project.yaml` | a 4-class checkpoint: the pipeline is not tied to the bird model |
@@ -84,7 +85,7 @@ wren/              the pipeline: cli.py, setup.py (stdlib only), config.py, runn
 wren/torchside/    prepare, train, evaluate, model loading, reference data; export_backbone.py and make_specs.py
                    come from WrenNet's conversion scripts (make_specs.py also reads .flac)
 wren/tfside/       int8 conversion and device-pipeline evaluation
-wrennet/           WrenNet: architecture, original training code, the bird checkpoint
+wrennet/           WrenNet: the architecture and learned front-end (package `wrennet`), checkpoints/birds.pt
 audiomoth/         the AudioMoth firmware, its tests and the TFLM build scripts (MIT, Open Acoustic Devices)
 envs/              the environments' intent (.in) and locks
 docker/            the reference Dockerfile

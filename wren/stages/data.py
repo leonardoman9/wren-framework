@@ -38,9 +38,9 @@ def train(r, prep_dir, prep_key, force=False):
     out = p.run_dir / "train"
     out.mkdir(parents=True, exist_ok=True)
     spec = {"classes": p.classes, "negative": p.negative_index, **p.training,
-            "wrennet_checkpoint": str(ROOT / "wrennet" / "best_distillation_model.pt")}
+            "wrennet_checkpoint": str(ROOT / "wrennet" / "checkpoints" / "birds.pt")}
     key = stage_key("train-1", prep_key, spec, code("torchside/train.py", "torchside/model.py", "torchside/metrics.py"),
-                    ROOT / "wrennet" / "best_distillation_model.pt", tree_hash(ROOT / "wrennet"))
+                    ROOT / "wrennet" / "checkpoints" / "birds.pt", tree_hash(ROOT / "wrennet"))
     if not force and up_to_date(out, key) and (out / "best.pt").exists():
         print("train: up to date"); return out, key
     print(f"train ({p.training['init']}, up to {p.training['epochs']} epochs)")

@@ -50,7 +50,7 @@ Lophophanes cristatus, Periparus ater, Poecile montanus, non-bird.
 The model that goes into the firmware is in this repository, as a **model package** in `firmware/bird/model/`
 (int8 backbone `bird_backbone_int8.tflite`, sha256 `c1c814d2…`, made by the wren pipeline from `examples/birds`, plus
 the generated C headers and the class list; see "Other models" below). The PyTorch checkpoint
-(`wrennet/best_distillation_model.pt`) is only needed for the comparisons against PyTorch.
+(`wrennet/checkpoints/birds.pt`) is only needed for the comparisons against PyTorch.
 
 ## Build
 
@@ -180,7 +180,7 @@ python3 tests/sim/make_test_audio.py audio.raw 60      # synthetic audio; or mak
 python3 tests/sim/run_scenario.py tests/sim/out/bird_logger_sim audio.raw /tmp/work 2
 python3 tests/sim/check_long_run.py /tmp/work 2026-10-21 2   # every window of every day, sessions, recordings
 python3 tests/sim/check_recording.py audio.raw /tmp/work/sd  # the recordings are the microphone input
-python3 tests/sim/verify_log.py /path/to/WrenNet best_distillation_model.pt /tmp/work    # comparison with PyTorch
+../.venv-torch/bin/python tests/sim/verify_log.py ../wrennet/checkpoints/birds.pt /tmp/work    # comparison with PyTorch
 
 # fault injection: no SD, no SRAM, failed writes, SD stalls and slow cards, reset and power cut during the recording
 # and during the classification (and 25 cut times), a full card, a window that always crashes, an unreadable pending
@@ -205,12 +205,15 @@ firmware/app      application: main_app.c (hardware), schedule.c (schedule and l
 firmware/bird     front-end, TFLM backbone, GRU/attention tail, QEMU and generator scripts
 firmware/bird/model  default model package (int8 backbone, generated headers, class list, test vectors)
 firmware/patches  TFLM patch (removes the int4 kernels, saves flash)
-vendor/audiomoth  AudioMoth hardware library (emlib, FatFS, drivers, audiomoth.c) from AudioMoth-Firmware-Basic
+vendor/audiomoth  AudioMoth hardware library (emlib, FatFS, drivers, audiomoth.c) from AudioMoth-Firmware-Basic;
+                  of the EFM32 part headers only the AudioMoth's (efm32wg380f256.h) is kept
 tests/            sim (simulator, fault injection, long runs), fstest (FatFS), schedule, qemu (pipeline test + vectors)
 tools/            board/ (first-board-test kit), table generator, QEMU instruction-count plugin, energy parser
 scripts/          setup_tflm.sh, build_tflm.sh
-docs/             VERIFICATION.md (all results), FIRST_BOARD_TEST.md, TFLM_BUILD.md, datasheets
+docs/             VERIFICATION.md (all results), FIRST_BOARD_TEST.md, TFLM_BUILD.md
 ```
+
+The board's datasheet is linked from the [AudioMoth Dev product page](https://groupgets.com/products/audiomoth-dev).
 
 ## Known limitations
 
