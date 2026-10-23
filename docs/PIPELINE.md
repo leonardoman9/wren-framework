@@ -85,19 +85,22 @@ CI (`.github/workflows/ci.yml`) runs them in the Docker image, natively on Linux
 ## Learning from BirdNET: measured so far
 
 `tests/birds_birdnet/` (8 species, at most 10 recordings each, 3 s calibration clips; background = 62 other species;
-74 test windows, so ±0.1 is noise), one run each, macOS arm64, 2026-10-23, defaults α 0.5, T 4, γ 2, 40 epochs:
+74 test windows), defaults α 0.5, T 4, γ 2, 40 epochs, 2026-10-23:
 
-| init | | validation macro-F1 | test macro-F1 |
-|---|---|---|---|
-| wrennet | with BirdNET | 0.725 | 0.587 |
-| wrennet | without | 0.749 | 0.801 |
-| scratch | with BirdNET | 0.384 | 0.409 |
-| scratch | without | 0.487 | 0.413 |
+| init | | where | validation macro-F1 | test macro-F1 |
+|---|---|---|---|---|
+| wrennet | with BirdNET | macOS arm64 (mps) | 0.725 | 0.587 |
+| wrennet | with BirdNET | Docker (CPU, CI) | 0.727 | 0.787 |
+| wrennet | without | macOS arm64 (mps) | 0.749 | 0.801 |
+| scratch | with BirdNET | macOS arm64 (mps) | 0.384 | 0.409 |
+| scratch | without | macOS arm64 (mps) | 0.487 | 0.413 |
 
-On this small set BirdNET does not help, and with `init: wrennet` (a model already trained with BirdNET as teacher on
-these species) it costs accuracy. It is not a recommendation either way: the set is tiny, the clips come from the
-calibration bundle, and α and T were not tuned. BirdNET named the folder's species on 88 % of the species training
-windows.
+No conclusion can be drawn from these. The same project with BirdNET gave test macro-F1 0.587 on one computer and 0.787
+on another (training is not byte-reproducible across computers): the run-to-run spread is as large as the difference
+with and without BirdNET. The test set is too small (74 windows, mostly background, 4–8 per species), the clips come
+from the calibration bundle, α and T were not tuned, and with `init: wrennet` the starting model was already trained
+with BirdNET as teacher on these species. BirdNET named the folder's species on 88 % of the species training windows.
+A meaningful comparison needs a larger labelled test set (specs/006-bird-accuracy-remeasure) and several seeds.
 
 ## Layout
 
