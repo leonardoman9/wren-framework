@@ -40,7 +40,7 @@ byte-exact rerun in Docker; the bundle's licences in `tests/test_examples.py`.
 
 **Independent Test**: quickstart.md steps 1, 2, 4, 6.
 
-- [ ] T005 [P] [US1] `tools/make_test_bundle.py` per contracts/test-bundle.md (structure of
+- [X] T005 [P] [US1] `tools/make_test_bundle.py` per contracts/test-bundle.md (structure of
   `tools/make_calibration_bundle.py`: `argparse`, xeno-canto API v3 with `XC_API_KEY`, `licence()` rules "CC0 / CC BY /
   CC BY-SA only, no NC, ND"): species stretches outside the calibration clips (± 1.5 s), ≤ `--max-seconds 120` per
   recording, "32 kHz mono 16-bit FLAC"; Freesound API v2 search with `FREESOUND_API_KEY`, filter
@@ -48,32 +48,32 @@ byte-exact rerun in Docker; the bundle's licences in `tests/test_examples.py`.
   0.1 in any 3 s window" (reusing `wren/tfside/birdnet.py`'s interpreter code through a small helper run in the tf
   environment), `--non-bird 40` balanced over the queries; writes `audio/`, `ATTRIBUTION.csv` (columns of
   data-model.md, `uploaded` from xeno-canto / Freesound `created`), `SHA256SUMS`, `LICENSE.md`, `README.md`
-- [ ] T006 [US1] Build the bundle: `. ~/.wren-keys && .venv-torch/bin/python tools/make_test_bundle.py examples/birds/test`;
+- [X] T006 [US1] Build the bundle: `. ~/.wren-keys && .venv-torch/bin/python tools/make_test_bundle.py examples/birds/test`;
   record counts per species, recordings per species, unseen recordings (uploaded after 2025-06-11), non-bird sounds and
   total size in research.md; check no file is from BioDCASE and every licence is free
-- [ ] T007 [P] [US1] `tests/test_examples.py`: the test bundle's attribution (one row per clip, licences CC0/BY/BY-SA, no
+- [X] T007 [P] [US1] `tests/test_examples.py`: the test bundle's attribution (one row per clip, licences CC0/BY/BY-SA, no
   `-nc`/`-nd`, source xeno-canto or freesound) and `SHA256SUMS` (every listed file matches) — as `test_bundle_attribution`
   does for the calibration bundle
-- [ ] T008 [P] [US1] `tests/test_measure.py` (pytest, fixture of ~30 synthetic windows over 6 recordings, no audio):
+- [X] T008 [P] [US1] `tests/test_measure.py` (pytest, fixture of ~30 synthetic windows over 6 recordings, no audio):
   bootstrap over recordings is deterministic (seed 0) and its interval contains the point value; windows of one
   recording move together; false-detection rates (any, and ≥ 50 % confidence) on non-bird windows; a class with < 5
   recordings is `"meaningful": false`; the unseen subset is `null` when empty; JSON keys sorted, 4 decimals
-- [ ] T009 [US1] `wren/torchside/accuracy.py` (`python -m wren.torchside.accuracy PREP_DIR WINDOWS.npz REF.npz
+- [X] T009 [US1] `wren/torchside/accuracy.py` (`python -m wren.torchside.accuracy PREP_DIR WINDOWS.npz REF.npz
   ATTRIBUTION.csv CLASSES_JSON OUT_DIR`): each window's recording from `REF.npz` `names` (prefix `XC<id>` / `FS<id>`
   of `XC<id>_<k>.flac@<s>s`), in `windows_ref`'s window order; the confidence threshold from
   `examples/birds/project.yaml` `device.confidence`, written into `accuracy.json`; statistics of data-model.md and research R5 (2,000 resamples, seed 0, 95 %), `uploaded`
   > 2025-06-11 subset, writes `accuracy.json` (sorted keys, 4 decimals) and `accuracy.md` (plain tables: overall,
   per species, confusion, false detections, unseen subset, limits)
-- [ ] T010 [US1] `tools/measure_bird_accuracy.py` per contracts/measurement.md steps 1–6 (standard library; environments'
+- [X] T010 [US1] `tools/measure_bird_accuracy.py` per contracts/measurement.md steps 1–6 (standard library; environments'
   Pythons with `wren.runner.PINNED` in their environment, as export and package; logs in `OUT_DIR/logs/`; plain messages); classes from `examples/birds/project.yaml` (`non-bird` last)
-- [ ] T011 [US1] Run the measurement; copy `accuracy.json` to `examples/birds/test/accuracy.json`
-- [ ] T012 [US1] `audiomoth/docs/VERIFICATION.md` §9: replace the old figures with `accuracy.md`'s (overall, per species
+- [X] T011 [US1] Run the measurement; copy `accuracy.json` to `examples/birds/test/accuracy.json`
+- [X] T012 [US1] `audiomoth/docs/VERIFICATION.md` §9: replace the old figures with `accuracy.md`'s (overall, per species
   with counts, float vs device with interval, false detections, unseen subset), the method (bundle, call-finding,
   bootstrap), the limits (FR-008: xeno-canto training overlap except the unseen subset; same recordings as the
   calibration clips at other times; species below 5 recordings not meaningful, naming them — today *Emberiza cia* and
   *Poecile montanus*, 4 free recordings each, unless the bundle finds more), the removed analogue-chain rows and why
   (research R7), and the command that reproduces it
-- [ ] T013 [P] [US1] `audiomoth/firmware/bird/model/README.md` and `README.md` ("Measured so far"): the new headline
+- [X] T013 [P] [US1] `audiomoth/firmware/bird/model/README.md` and `README.md` ("Measured so far"): the new headline
   figures with a link to §9; no old figure presented as current (SC-004)
 
 **Checkpoint**: commit "Bird model accuracy re-measured on a freely licensed test bundle".
@@ -99,7 +99,7 @@ byte-exact rerun in Docker; the bundle's licences in `tests/test_examples.py`.
 
 ## Phase 5: Polish
 
-- [ ] T017 [P] `docs/PIPELINE.md`: the measurement in the tests table and a "Bird model accuracy" pointer to §9; the
+- [X] T017 [P] `docs/PIPELINE.md`: the measurement in the tests table and a "Bird model accuracy" pointer to §9; the
   BirdNET comparison section names the new bundle as the set for a future comparison
 - [ ] T018 Option-off checks: `tests/test_training.py`, the pytest unit checks and `tests/test_birds_reproduction.sh`
   pass as on `main` (package files identical to `main`'s native output)

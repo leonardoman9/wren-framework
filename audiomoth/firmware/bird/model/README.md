@@ -23,6 +23,10 @@ The build scripts take a package folder, or a `.tflite` inside one:
 
 ## This package: WrenNet birds, 8 species + non-bird
 
+Accuracy (re-measured 23 October 2026, `docs/VERIFICATION.md` §9): on freely licensed species recordings never seen in
+training, 71 % of call windows right on the device; 75 % of windows without birds (wind, rain, water,
+traffic) are called a species, mostly *Bubo bubo*.
+
 Checkpoint `wrennet/checkpoints/birds.pt`; `bird_backbone_int8.tflite` sha256 `c1c814d2…`. Made by the wren pipeline (`examples/birds/project.yaml`) in the
 Docker image, and reproduced byte for byte by `tests/test_birds_reproduction.sh`. The int8 ranges (calibration and
 evaluation) and the test vector `test/pipe_vec.cc` come from the calibration bundle `examples/birds/calibration/`

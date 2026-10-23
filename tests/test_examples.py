@@ -38,3 +38,26 @@ def test_bundle_attribution():
     bad = [(r["clip"], r["licence_url"]) for r in rows
            if not any(f in r["licence_url"] for f in FREE) or "-nc" in r["licence_url"] or "-nd" in r["licence_url"]]
     assert not bad, f"not CC0 / CC-BY / CC-BY-SA: {bad[:5]}"
+
+
+TEST_BUNDLE = ROOT / "examples" / "birds" / "test"
+
+
+@pytest.mark.skipif(not (TEST_BUNDLE / "ATTRIBUTION.csv").exists(), reason="test bundle not built yet")
+def test_test_bundle_attribution_and_checksums():
+    """The bird accuracy test bundle (specs/006-bird-accuracy-remeasure): one free-licence row per clip, xeno-canto or
+    Freesound only, and every file as in SHA256SUMS."""
+    import hashlib
+    rows = list(csv.DictReader((TEST_BUNDLE / "ATTRIBUTION.csv").open()))
+    clips = {str(p.relative_to(TEST_BUNDLE / "audio")) for p in (TEST_BUNDLE / "audio").rglob("*.flac")}
+    listed = [r["clip"] for r in rows]
+    assert len(listed) == len(set(listed)) and set(listed) == clips
+    assert {r["source"] for r in rows} <= {"xeno-canto", "freesound"}
+    bad = [(r["clip"], r["licence_url"]) for r in rows
+           if not any(f in r["licence_url"] for f in FREE) or "-nc" in r["licence_url"] or "-nd" in r["licence_url"]]
+    assert not bad, f"not CC0 / CC-BY / CC-BY-SA: {bad[:5]}"
+    assert all(r["licence"].startswith("CC0") for r in rows if r["source"] == "freesound")
+    sums = dict(reversed(line.split("  ", 1)) for line in (TEST_BUNDLE / "SHA256SUMS").read_text().splitlines())
+    assert set(sums) == {f"audio/{c}" for c in clips}
+    assert all(hashlib.sha256((TEST_BUNDLE / p).read_bytes()).hexdigest() == h for p, h in sums.items())
+    assert "biodcase" not in (TEST_BUNDLE / "ATTRIBUTION.csv").read_text().lower()

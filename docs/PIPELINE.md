@@ -74,6 +74,7 @@ CPUs round the last bit differently. Each source was removed where it was found:
 | `tests/test_birdnet.py` | learning from BirdNET: species matching, refusals, stored results without BirdNET, the corrected target and the loss |
 | `tests/synthetic/project_birdnet.yaml` | the refusal: non-bird sounds with `birdnet: true` stop in the project check |
 | `tests/birds_birdnet/project.yaml`, `project_off.yaml` | a bird project from the calibration bundle (`tests/make_bird_dataset.py`) with and without BirdNET, to the firmware |
+| `tests/test_measure.py`, `tests/test_bird_accuracy.sh` | the bird accuracy statistics (bootstrap per recording, false detections); the measurement on `examples/birds/test/` reproduces `accuracy.json` (byte for byte in Docker) |
 | `tests/test_layout.py` | `wrennet/` holds only the model package and the checkpoint; no old WrenNet paths; removed firmware files stay removed |
 | `tests/synthetic/project.yaml` | the whole chain, from synthetic audio to tested firmware |
 | `tests/minimal/project.yaml` | a project with only `data:` (every default) |
@@ -100,7 +101,16 @@ on another (training is not byte-reproducible across computers): the run-to-run 
 with and without BirdNET. The test set is too small (74 windows, mostly background, 4–8 per species), the clips come
 from the calibration bundle, α and T were not tuned, and with `init: wrennet` the starting model was already trained
 with BirdNET as teacher on these species. BirdNET named the folder's species on 88 % of the species training windows.
-A meaningful comparison needs a larger labelled test set (specs/006-bird-accuracy-remeasure) and several seeds.
+A meaningful comparison needs a larger labelled test set and several seeds; `examples/birds/test/` (feature 006) is
+that set for the species and the false detections.
+
+## Bird model accuracy
+
+`python tools/measure_bird_accuracy.py` measures the shipped model on `examples/birds/test/` (freely licensed: xeno-canto
+species recordings outside the calibration clips, BirdNET-screened CC0 Freesound field sounds) through prepare's
+call-finding, the float reference and the device pipeline; figures, intervals and limits in
+`audiomoth/docs/VERIFICATION.md` §9. The bundle is built once by `tools/make_test_bundle.py` (xeno-canto and Freesound
+keys).
 
 ## Layout
 
