@@ -205,12 +205,15 @@ firmware/app      application: main_app.c (hardware), schedule.c (schedule and l
 firmware/bird     front-end, TFLM backbone, GRU/attention tail, QEMU and generator scripts
 firmware/bird/model  default model package (int8 backbone, generated headers, class list, test vectors)
 firmware/patches  TFLM patch (removes the int4 kernels, saves flash)
-vendor/audiomoth  AudioMoth hardware library (emlib, FatFS, drivers, audiomoth.c) from AudioMoth-Firmware-Basic
+vendor/audiomoth  AudioMoth hardware library (emlib, FatFS, drivers, audiomoth.c) from AudioMoth-Firmware-Basic;
+                  of the EFM32 part headers only the AudioMoth's (efm32wg380f256.h) is kept
 tests/            sim (simulator, fault injection, long runs), fstest (FatFS), schedule, qemu (pipeline test + vectors)
 tools/            board/ (first-board-test kit), table generator, QEMU instruction-count plugin, energy parser
 scripts/          setup_tflm.sh, build_tflm.sh
-docs/             VERIFICATION.md (all results), FIRST_BOARD_TEST.md, TFLM_BUILD.md, datasheets
+docs/             VERIFICATION.md (all results), FIRST_BOARD_TEST.md, TFLM_BUILD.md
 ```
+
+The board's datasheet is linked from the [AudioMoth Dev product page](https://groupgets.com/products/audiomoth-dev).
 
 ## Known limitations
 
