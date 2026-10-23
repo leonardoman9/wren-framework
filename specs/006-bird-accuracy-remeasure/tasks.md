@@ -103,7 +103,7 @@ byte-exact rerun in Docker; the bundle's licences in `tests/test_examples.py`.
   BirdNET comparison section names the new bundle as the set for a future comparison
 - [X] T018 Option-off checks: `tests/test_training.py`, the pytest unit checks and `tests/test_birds_reproduction.sh`
   pass as on `main` (package files identical to `main`'s native output)
-- [ ] T019 Push, open a pull request (not merged), confirm the three CI jobs pass
+- [X] T019 Push, open a pull request (not merged), confirm the three CI jobs pass
 
 ---
 
