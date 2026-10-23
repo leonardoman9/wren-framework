@@ -20,12 +20,14 @@ RUN rm -f /etc/apt/sources.list.d/debian.sources \
 WORKDIR /wren
 # the same setup command as a native install (FR-006), in layers that change rarely
 COPY envs/ envs/
-COPY wren/__init__.py wren/__main__.py wren/cli.py wren/setup.py wren/
+COPY wren/__init__.py wren/__main__.py wren/cli.py wren/setup.py wren/birdnet.py wren/
 RUN python -m wren setup || { cat runs/_setup/logs/setup.log; exit 1; }
 # only what TFLM needs, so that changes elsewhere in audiomoth/ (code, model package) do not rebuild it
 COPY audiomoth/scripts/ audiomoth/scripts/
 COPY audiomoth/firmware/patches/ audiomoth/firmware/patches/
 RUN python -m wren setup --tflm || { tail -50 runs/_setup/logs/setup.log; exit 1; }
+# BirdNET, for training: birdnet: true (specs/003-birdnet-distillation); pinned by sha256, downloaded once per image
+RUN python -m wren setup --birdnet
 
 COPY . .
 ARG WREN_IMAGE_ID=unset
