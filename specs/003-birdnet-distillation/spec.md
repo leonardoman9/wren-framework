@@ -164,10 +164,12 @@ check with that message.
   is not a species.
 - BirdNET runs on the researcher's computer with no internet access needed after installation, and is installed as an
   extra only when the option is used (the base install stays as in feature 001).
-- BirdNET's licence permits this use for research and education. Its exact terms (the model weights have been published
-  under CC BY-NC-SA 4.0 by the BirdNET team) are checked during planning, and the report and README state them, so a
-  researcher knows any non-commercial condition that may apply to a model trained with it.
-- BirdNET listens at a different sample rate than the device; it analyses the original recording of each window, not
-  the device's version, because it is the teacher, not the model being built.
+- BirdNET's licence permits this use for research and education. Checked in planning: the official BirdNET v2.4
+  model record (Zenodo 15050749) is licensed CC BY-NC 4.0 (the `birdnet` package README says CC BY-NC-SA 4.0); the
+  report and README state the licence, so a researcher knows the non-commercial condition that may apply to a model
+  trained with it.
+- BirdNET listens at 48 kHz and the pipeline prepares audio at 32 kHz. Everything BirdNET uses (up to 15 kHz) is in the
+  prepared 32 kHz audio, so BirdNET analyses the prepared windows resampled to 48 kHz (checked in planning: it names
+  the right species on the bird calibration clips this way).
 - Accuracy gains are measured, not promised (constitution VI): SC-003 is checked on a freely licensed test project and
   reported as measured.
