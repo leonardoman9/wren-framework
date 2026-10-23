@@ -1,11 +1,11 @@
 """Checks the simulator's dumped windows against the PyTorch model on the same PCM.
-Usage: [MODEL_PKG=dir] python verify_log.py WRENNET_ROOT CKPT WORKDIR"""
+Usage: [MODEL_PKG=dir] python verify_log.py CKPT WORKDIR"""
 import json, os, sys
 from pathlib import Path
 import numpy as np, torch
-root, ckpt, work = Path(sys.argv[1]), Path(sys.argv[2]), Path(sys.argv[3])
-sys.path.insert(0, str(root / "tools"))
-from bird_model_export_check import load_model
+ckpt, work = Path(sys.argv[1]), Path(sys.argv[2])
+sys.path.insert(0, str(Path(__file__).resolve().parents[3]))  # the repository: wren's model loader
+from wren.torchside.model import load_model  # noqa: E402
 m = load_model(ckpt)
 names = json.load(open(Path(os.environ.get("MODEL_PKG") or Path(__file__).resolve().parents[2] / "firmware/bird/model") / "model_config.json"))["names"]
 log = (work / "sd" / "LOG.TXT").read_text().splitlines()

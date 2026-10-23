@@ -52,7 +52,7 @@ file (384 kHz samples reconstructed for the real decimation filter).
     tests/sim/build_sim.sh TFLM_ROOT bird_backbone_int8.tflite
     python tests/sim/make_audio.py audio.raw <audio files or folders>
     python tests/sim/run_scenario.py tests/sim/out/bird_logger_sim audio.raw WORKDIR 2
-    python tests/sim/verify_log.py WRENNET_ROOT best_distillation_model.pt WORKDIR
+    ../.venv-torch/bin/python tests/sim/verify_log.py ../wrennet/checkpoints/birds.pt WORKDIR
 
 Result (2 simulated days, clock set to 06:58:30 by CONFIG.TXT): one 300 s recording per day starting exactly at
 07:00:00, 100 log lines per day (07:00:00 to 07:04:57), every window equal to the matching slice of the recording,

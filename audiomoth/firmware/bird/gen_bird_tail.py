@@ -1,11 +1,10 @@
 """Export the tail of the bird model (GRU, projection, attention, classifier) as C
 weights plus reference vectors for host/QEMU tests.
 
-Usage (env with torch, torchaudio, torchsummary, soundfile):
-  python gen_bird_tail.py WRENNET_ROOT CHECKPOINT.pt REFERENCE.npz OUT_DIR
+Usage (torch environment): .venv-torch/bin/python gen_bird_tail.py CHECKPOINT.pt REFERENCE.npz OUT_DIR
 
-REFERENCE.npz is docs/deployment/bird/bird_reference.npz (written by
-tools/bird_model_export_check.py). Weights are written twice: float32 (exact
+REFERENCE.npz is the export stage's runs/<name>/export/reference.npz (written by
+wren/torchside/reference.py). Weights are written twice: float32 (exact
 reference) and int8 with one symmetric scale per output row (flash-friendly).
 """
 import sys
@@ -14,10 +13,10 @@ from pathlib import Path
 import numpy as np
 import torch
 
-root, ckpt, ref, out = Path(sys.argv[1]), Path(sys.argv[2]), Path(sys.argv[3]), Path(sys.argv[4])
+ckpt, ref, out = Path(sys.argv[1]), Path(sys.argv[2]), Path(sys.argv[3])
 out.mkdir(parents=True, exist_ok=True)
-sys.path.insert(0, str(root / "tools"))
-from bird_model_export_check import load_model  # noqa: E402
+sys.path.insert(0, str(Path(__file__).resolve().parents[3]))  # the repository: wren's model loader
+from wren.torchside.model import load_model  # noqa: E402
 
 m = load_model(ckpt)
 r = np.load(ref)

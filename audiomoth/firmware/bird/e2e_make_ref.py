@@ -1,14 +1,14 @@
-"""PyTorch reference for the whole model on int16 audio. Usage: python e2e_make_ref.py WRENNET_ROOT CKPT OUT.npz N DIR_OR_FILE..."""
+"""PyTorch reference for the whole model on int16 audio. Usage: python e2e_make_ref.py CKPT OUT.npz N DIR_OR_FILE..."""
 import random, sys
 from pathlib import Path
 import numpy as np, soundfile, torch, torchaudio
-root, ckpt, out, n = Path(sys.argv[1]), Path(sys.argv[2]), Path(sys.argv[3]), int(sys.argv[4])
-sys.path.insert(0, str(root / "tools"))
-from bird_model_export_check import SR, load_model  # noqa: E402
+ckpt, out, n = Path(sys.argv[1]), Path(sys.argv[2]), int(sys.argv[3])
+sys.path.insert(0, str(Path(__file__).resolve().parents[3]))  # the repository: wren's model loader
+from wren.torchside.model import SR, load_model  # noqa: E402
 # float64, rounded once to float32: MKL's last bits differ between CPUs, and they vanish in the rounding
 m = load_model(ckpt).double()
 files = []
-for a in sys.argv[5:]:
+for a in sys.argv[4:]:
     p = Path(a); files += (sorted(p.rglob("*.wav")) + sorted(p.rglob("*.mp3")) + sorted(p.rglob("*.flac"))) if p.is_dir() else [p]
 random.Random(7).shuffle(files)
 pcms, logits, names = [], [], []
