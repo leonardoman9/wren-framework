@@ -9,7 +9,18 @@ import json
 import re
 import shutil
 
-from wren.runner import code, content, mark_done, need, sha256, stage_key, tree_hash, up_to_date
+from wren.runner import code, content, mark_done, model_code, need, sha256, stage_key, tree_hash, up_to_date
+
+
+def input_key(p, export_dir):
+    """Everything the package depends on: the export's outputs, the checkpoint and the model code (tail weights and test
+    reference come from the model), the device settings, the test audio and the firmware sources."""
+    prep_state = p.run_dir / "prepare" / "stage.json"
+    return stage_key("package-3", p.trains, p.trains and prep_state.exists() and prep_state.read_text(),
+                     p.trains and code("torchside/windows_ref.py", "tfside/device_eval.py"), export_dir / "model.tflite", export_dir / "reference.npz", p.checkpoint, p.classes,
+                     p.negative, p.window_start, p.window_minutes, p.hop_seconds, p.confidence,
+                     content(*p.test_audio), p.test_windows, tree_hash(p.firmware_repo), code("stages/package.py", "runner.py"),
+                     model_code())
 
 
 def run(r, export_dir, force=False):
@@ -19,11 +30,7 @@ def run(r, export_dir, force=False):
     bird = fw / "firmware" / "bird"
     out = p.run_dir / "package"
     work = p.run_dir / "package_work"
-    prep_state = p.run_dir / "prepare" / "stage.json"
-    key = stage_key("package-3", p.trains, p.trains and prep_state.exists() and prep_state.read_text(),
-                    p.trains and code("torchside/windows_ref.py", "tfside/device_eval.py"), export_dir / "model.tflite", export_dir / "reference.npz", p.checkpoint, p.classes,
-                    p.negative, p.window_start, p.window_minutes, p.hop_seconds, p.confidence,
-                    content(*p.test_audio), p.test_windows, tree_hash(fw), code("stages/package.py", "runner.py"))
+    key = input_key(p, export_dir)
     if not force and up_to_date(out, key):
         print("package: up to date"); return out
     print("package")

@@ -94,6 +94,18 @@ def listing(*folders):
     return items
 
 
+def model_code(root=ROOT):
+    """Hash of the model's source: WrenNet's architecture (wrennet/**/*.py) and wren's loader (wren/torchside/model.py).
+    Part of the key of every stage that loads the model (specs/004-model-code-stage-keys), so a change to the model code
+    re-runs them; READMEs and caches do not count, and the checkpoint enters the keys by content where it is used."""
+    root = Path(root)
+    files = sorted((root / "wrennet").rglob("*.py")) + [root / "wren" / "torchside" / "model.py"]
+    h = hashlib.sha256()
+    for f in files:
+        h.update(str(f.relative_to(root)).encode() + b"\0" + f.read_bytes())
+    return h.hexdigest()
+
+
 def code(*names):
     """Hash of wren's own code files, so a changed stage reruns."""
     return [sha256(ROOT / "wren" / n) for n in names]
