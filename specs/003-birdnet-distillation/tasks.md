@@ -173,7 +173,7 @@ synthetic sounds.
   `tests/test_birds_reproduction.sh` pass as on `main` (package files identical to `main`'s native output); before the
   feature's changes, save `runs/test-synthetic/train/{train.json,history.csv}` from a run on `main` on this computer,
   and check that the branch gives the same best epoch, metrics and `history.csv` (timings excluded)
-- [ ] T026 Push the branch, open a pull request (not merged), confirm the three CI jobs pass
+- [X] T026 Push the branch, open a pull request (not merged), confirm the three CI jobs pass
 
 ---
 
