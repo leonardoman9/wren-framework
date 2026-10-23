@@ -2,7 +2,9 @@
 Usage: python -m wren.torchside.train SPEC.json PREPARE_DIR OUT_DIR
 
 SPEC.json: classes, negative, init (wrennet|scratch), wrennet_checkpoint, epochs, batch_size, lr, negative_share, loss
-(ce|focal), focal_gamma, augment, seed, device (auto|cpu|mps|cuda), patience, warmup_epochs.
+(ce|focal), focal_gamma, augment, seed, device (auto|cpu|mps|cuda), patience, warmup_epochs; with learning from BirdNET
+also birdnet_teacher (teacher.npz), birdnet_names (scientific names, class order without the background), birdnet_weight,
+birdnet_temperature.
 Outputs: best.pt (plain state_dict, loads with wren.torchside.model.load_model), history.csv, train.json.
 
 Choices (README.md, project.yaml → training):
@@ -14,7 +16,11 @@ Choices (README.md, project.yaml → training):
 - batches: negative_share of background windows, the other classes equally, files equally within a class;
   cross-entropy (focal optional); classifier bias = log of these shares;
 - augmentation: offset jitter within the file, background mix 5-20 dB, speed +-5 %, random low-pass, SpecAugment;
-- cosine learning rate; the best epoch by validation macro-F1 (tie: lower validation loss); early stopping.
+- cosine learning rate; the best epoch by validation macro-F1 (tie: lower validation loss); early stopping;
+- learning from BirdNET (specs/003-birdnet-distillation): each drawn window takes BirdNET's opinion of the nearest
+  window on prepare's grid of the same recording (by content); loss = the original WrenNet focal distillation with a
+  corrected target (wren/torchside/birdnet_target.py); validation, model selection and early stopping stay on the folder
+  labels only.
 """
 import csv
 import json
@@ -28,6 +34,7 @@ import torch
 import torch.nn.functional as F
 import torchaudio
 
+from wren.torchside.birdnet_target import focal, focal_distillation, mask, target
 from wren.torchside.metrics import scores
 from wren.torchside.model import Core, build_model, device_forward, frontend, load_model
 
@@ -175,8 +182,28 @@ gamma = float(spec.get("focal_gamma", 2.0)) if spec["loss"] == "focal" else 0.0
 
 
 def loss_fn(logits, y):
-    ce = F.cross_entropy(logits, y, reduction="none")
-    return (ce if gamma == 0 else (1 - torch.exp(-ce)) ** gamma * ce).mean()
+    return focal(logits, y, gamma)
+
+
+# --- BirdNET's opinion of the training windows (only with training: birdnet: true) ---------------------------------
+teacher = None
+if spec.get("birdnet_teacher"):
+    tz = np.load(spec["birdnet_teacher"])
+    alpha, temp = float(spec["birdnet_weight"]), float(spec["birdnet_temperature"])
+    by_path = {k: v[2] for k, v in json.loads((Path(spec["birdnet_teacher"]).parent / "hashes.json").read_text()).items()}
+    rows_of = {}
+    for i, (h, s) in enumerate(zip(tz["file_sha256"], tz["start"])): rows_of.setdefault(str(h), []).append((int(s), i))
+    teacher_rows = []
+    for f in train.files:
+        r_ = sorted(rows_of.get(by_path[f["path"]], []))
+        if not r_: sys.exit(f"train: BirdNET's results do not cover {f['path']}; run python -m wren setup --birdnet")
+        teacher_rows.append((np.array([s for s, _ in r_]), np.array([i for _, i in r_])))
+    teacher = torch.from_numpy(tz["confidence"])
+
+
+def teacher_row(fi, start):
+    starts, idx = teacher_rows[fi]
+    return int(idx[int(np.abs(starts - start).argmin())])
 
 
 def evaluate_split(split):
@@ -212,7 +239,12 @@ for epoch in range(1, spec["epochs"] + 1):
         if spec["init"] == "scratch": fl.rebuild_filters()  # the cache would drop the filterbank's gradient
         s, _ = frontend(m, x)
         if spec["augment"]: s = spec_augment(s)
-        loss = loss_fn(core(s), y)
+        logits = core(s)
+        if teacher is None:
+            loss = loss_fn(logits, y)
+        else:
+            c = teacher[[teacher_row(fi, st) for fi, st, _ in batch]].to(device)
+            loss = focal_distillation(logits, y, target(c, neg, K, temp), mask(c, y, neg), alpha, temp, gamma)
         opt.zero_grad(); loss.backward(); opt.step(); sched.step()
         tl += float(loss.detach()) * len(batch); tn += len(batch)
     if spec["init"] == "scratch": fl.rebuild_filters()
@@ -240,5 +272,30 @@ if not (math.isfinite(bp) and math.isfinite(tw) and tw > 0 and 150 < bp < 16000)
 info = {"best_epoch": best["epoch"], "best": best, "epochs_run": len(history), "device": dev, "init": spec["init"],
         "seed": seed, "classes": classes, "negative": neg, "train_windows": len(train.windows), "validation_windows": len(val.windows),
         "seconds": round(time.time() - t0, 1)}
+if teacher is not None:
+    from collections import Counter
+    names = spec["birdnet_names"]
+    per_class, bg, bg_species = {}, 0, 0
+    for k in range(K):
+        if k == neg: continue
+        col = k if neg < 0 or k < neg else k - 1
+        ws = [teacher_row(fi, s) for fi, s, label in train.windows if label == k]
+        c = teacher[ws]
+        tops = [str(tz["top_name"][i]) for i in ws]
+        y_k = torch.full((len(ws),), k)
+        others = Counter(t for t in tops if t != names[col])
+        per_class[classes[k]] = {
+            "windows": len(ws), "birdnet_top_is_folder": round(sum(t == names[col] for t in tops) / max(1, len(ws)), 3),
+            "birdnet_top_other_project": round(sum(t != names[col] and t in names for t in tops) / max(1, len(ws)), 3),
+            "birdnet_top_outside_project": round(sum(t not in names for t in tops) / max(1, len(ws)), 3),
+            "other_top": [n for n, _ in others.most_common(3)],
+            "target_top_is_folder": round(float((target(c, neg, K, temp).argmax(1) == k).float().mean()) if ws else 0.0, 3),
+            "skipped": int((mask(c, y_k, neg) == 0).sum())}
+    if neg >= 0:
+        ws = [teacher_row(fi, s) for fi, s, label in train.windows if label == neg]
+        bg, bg_species = len(ws), int((teacher[ws].max(1).values > 0.5).sum()) if ws else 0
+    info["birdnet"] = {"model": "BirdNET v2.4 GLOBAL 6K (Zenodo 15050749)", "licence": "CC BY-NC 4.0", "weight": alpha,
+                       "temperature": temp, "focal_gamma": gamma, "grid_windows": int(len(teacher)), "per_class": per_class,
+                       "background_with_species": {"windows": bg, "above_0_5": bg_species}}
 (out / "train.json").write_text(json.dumps(info, indent=2) + "\n")
 print(json.dumps(info))

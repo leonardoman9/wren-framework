@@ -27,6 +27,8 @@ LABELS = {
     "device_eval": "measuring the device version on the test audio", "test_vectors": "writing the test window",
     "test_spec": "writing the test window", "build": "building the firmware", "build_diag": "building the diagnostic firmware",
     "tests": "testing the firmware on a simulated device (a few minutes)",
+    "birdnet_windows": "preparing the training audio for BirdNET",
+    "birdnet": "asking BirdNET what it hears in the training audio",
 }
 
 

@@ -29,7 +29,17 @@ def provenance():
             "byte_reproducible": docker}
 
 
-def summary(p, pkg, fw, prov):
+def birdnet_line(bn):
+    """The plain summary line of a model that also learned from BirdNET (specs/003-birdnet-distillation, FR-006/FR-007)."""
+    per = bn.get("per_class", {})
+    n = sum(v["windows"] for v in per.values())
+    agree = sum(v["windows"] * v["birdnet_top_is_folder"] for v in per.values()) / max(1, n)
+    return (f"- **Learned from:** your folders and BirdNET v2.4 (BirdNET named your folder's species on {agree:.0%} of the "
+            f"{n} training windows of your species). BirdNET's licence is {bn.get('licence')} (non-commercial), which may "
+            "also apply to this model.")
+
+
+def summary(p, pkg, fw, prov, bn=None):
     """The plain-language part of the report (constitution I): what was made, does it fit, did every check pass."""
     tested = fw.get("tests") == "passed"
     agree = pkg.get("class_agreement") == pkg.get("windows") if pkg else False
@@ -43,6 +53,7 @@ def summary(p, pkg, fw, prov):
         + (f"yes, on all {pkg['windows']} test windows" if agree else
            f"on {pkg.get('class_agreement', '?')} of {pkg.get('windows', '?')} test windows"),
         f"- **Firmware tests on a simulated device:** {'passed' if tested else 'not run'}",
+        *([birdnet_line(bn)] if bn else []),
         "- **Made with:** " + ("the Docker reference path; the same inputs give byte-identical files on any computer"
                                if prov["byte_reproducible"] else
                                "a native install; verified by the checks above, but the bytes may differ from Docker's"),
@@ -79,7 +90,8 @@ def run(r):
     ]
     rows.append(("made with", "Docker reference path: byte-reproducible" if prov["byte_reproducible"] else
                  "native install: verified by parity checks, not byte-reproducible"))
-    text = f"# {p.name}\n\nMade {datetime.now(timezone.utc):%Y-%m-%d %H:%M} UTC by wren-framework.\n\n" + summary(p, pkg, fw, prov)
+    bn = load(d / "train" / "train.json").get("birdnet") if p.trains else None
+    text = f"# {p.name}\n\nMade {datetime.now(timezone.utc):%Y-%m-%d %H:%M} UTC by wren-framework.\n\n" + summary(p, pkg, fw, prov, bn)
     text += "## Technical details\n\n"
     if p.trains:
         prep, tr, ev = load(d / "prepare" / "prepare.json"), load(d / "train" / "train.json"), load(d / "evaluate" / "evaluate.json")
@@ -104,6 +116,16 @@ def run(r):
                          ("; " if bands else "") + "other classes: the whole range"))
         text += "".join(f"| {k} | {v} |\n" for k, v in drows)
         if prep.get("warnings"): text += "\nWarnings from prepare:\n" + "".join(f"- {w}\n" for w in prep["warnings"][:10])
+        if bn:
+            text += (f"\nLearned from BirdNET as well: {bn['model']}, licence {bn['licence']}; weight α {bn['weight']}, temperature T "
+                     f"{bn['temperature']}, focal γ {bn['focal_gamma']}; {bn['grid_windows']} training windows analysed. Background "
+                     f"windows where BirdNET heard one of your species (above 0.5): {bn['background_with_species']['above_0_5']} of "
+                     f"{bn['background_with_species']['windows']}.\n\n| class | windows | BirdNET's top species = folder | another of "
+                     "your species | outside the project (most frequent) | target's top class = folder | BirdNET part skipped |\n"
+                     "|---|---|---|---|---|---|---|\n")
+            text += "".join(f"| {c} | {v['windows']} | {v['birdnet_top_is_folder']:.0%} | {v['birdnet_top_other_project']:.0%} | "
+                            f"{v['birdnet_top_outside_project']:.0%} ({', '.join(v['other_top']) or '-'}) | "
+                            f"{v['target_top_is_folder']:.0%} | {v['skipped']} |\n" for c, v in bn["per_class"].items())
         per = ev.get("call_windows", {}).get("per_class", {})
         if per:
             text += "\nPer class (test call windows): " + ", ".join(f"{c} F1 {v['f1']:.2f}" for c, v in per.items()) + "\n"

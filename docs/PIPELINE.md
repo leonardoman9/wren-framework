@@ -13,7 +13,7 @@ key: a hash of the stage's inputs, by content for files. A stage whose key has n
 | stage | steps | checks |
 |---|---|---|
 | `prepare` | finds the audio (wav, flac, ogg, mp3, aiff, any case; files up to 30 min); splits it by file (or subfolder) with a fixed seed; decodes once to 32 kHz with the device's DC filter; for each positive file, picks the 3 s windows with an event in the class's frequency band; picks background windows on the device's grid | errors: fewer than 5 files in a class, empty splits, duplicates across splits, names the firmware cannot store, >10 % unreadable files. Warnings: different bandwidths or sample rates between classes, files without a clear event, padding |
-| `train` | WrenNet architecture with the class count taken from the folders; starts from WrenNet's weights (`init: wrennet`, learned filterbank kept) or from scratch; background share per batch; augmentation (gain, background mixing, speed, low-pass, SpecAugment); early stopping on validation macro-F1 | the learned filterbank stays valid |
+| `train` | WrenNet architecture with the class count taken from the folders; starts from WrenNet's weights (`init: wrennet`, learned filterbank kept) or from scratch; background share per batch; augmentation (gain, background mixing, speed, low-pass, SpecAugment); early stopping on validation macro-F1. With `birdnet: true`: BirdNET v2.4 (TFLite, `ai_edge_litert`) scores the training audio on prepare's grid, resampled to 48 kHz (cached in `train/birdnet/`, keyed by file contents); loss = focal distillation, (1 − α)·focal + α·T²·KL, with the target corrected from the original WrenNet project (`wren/torchside/birdnet_target.py`, specs/003-birdnet-distillation research R6); the KL term is skipped on species windows where BirdNET gives every project species < 0.1; validation and model selection on folder labels only | the learned filterbank stays valid; a sound that is not a BirdNET species is refused in the project check |
 | `evaluate` | test split, per call window and per file with the device's rule (every window on its grid, threshold); threshold suggested on validation; false reports per hour of background | **gate:** test macro-F1 must exceed 1/N + 0.1 |
 | `export` | splits the checkpoint into front-end + core; exports the backbone to ONNX in 4-D (no RESHAPE, `Hardswish` rewritten for TFLM); onnxsim; onnx2tf; int8 TFLite calibrated on the project's audio | front-end + core = whole model; ONNX = PyTorch; only operators the firmware registers; int8 vs float error |
 | `package` | learned filterbank → C tables; GRU/attention/classifier → int8 C weights; classes and device settings → `model_config.h`; one test window with its expected logits | the device pipeline (C front-end + int8 backbone + C tail, built for the host) against PyTorch on test windows; **gate (trained models):** int8 macro-F1 at most 0.05 below float |
@@ -41,6 +41,7 @@ Python that was typed lacks the pipeline's packages, so users never call a venv 
 | Model code and checkpoint | `wrennet/` (in this repository) |
 | Firmware | `audiomoth/` (in this repository) |
 | Bird calibration audio | `examples/birds/calibration/` with `SHA256SUMS` |
+| BirdNET (optional) | v2.4 TFLite, Zenodo 15050749, zip and both files by sha256 (`wren/birdnet.py`); `third_party/birdnet/`, not committed |
 
 Byte-identity is guaranteed only on the Docker path, which is `linux/amd64` on any host: the float conversion and
 the compiler builds differ by CPU architecture and OS (constitution V). Native installs are held to the parity checks
@@ -70,6 +71,9 @@ CPUs round the last bit differently. Each source was removed where it was found:
 | `tests/test_setup.py` | `python -m wren setup` checks and messages, symlinked environments, idempotency |
 | `tests/test_examples.py` | no absolute or BioDCASE paths in any project; the calibration bundle's attribution and licences |
 | `tests/test_stage_keys.py` | a stage reruns when its audio (by content), its conversion code or the model code (`wrennet/**/*.py`, `wren/torchside/model.py`) changes; READMEs and caches do not count |
+| `tests/test_birdnet.py` | learning from BirdNET: species matching, refusals, stored results without BirdNET, the corrected target and the loss |
+| `tests/synthetic/project_birdnet.yaml` | the refusal: non-bird sounds with `birdnet: true` stop in the project check |
+| `tests/birds_birdnet/project.yaml`, `project_off.yaml` | a bird project from the calibration bundle (`tests/make_bird_dataset.py`) with and without BirdNET, to the firmware |
 | `tests/test_layout.py` | `wrennet/` holds only the model package and the checkpoint; no old WrenNet paths; removed firmware files stay removed |
 | `tests/synthetic/project.yaml` | the whole chain, from synthetic audio to tested firmware |
 | `tests/minimal/project.yaml` | a project with only `data:` (every default) |
@@ -77,6 +81,26 @@ CPUs round the last bit differently. Each source was removed where it was found:
 | `tests/test_birds_reproduction.sh` | `examples/birds` gives the shipped package byte for byte, and in Docker the firmware hashes in `tests/expected/` |
 
 CI (`.github/workflows/ci.yml`) runs them in the Docker image, natively on Linux x86_64, and natively on macOS arm64.
+
+## Learning from BirdNET: measured so far
+
+`tests/birds_birdnet/` (8 species, at most 10 recordings each, 3 s calibration clips; background = 62 other species;
+74 test windows), defaults α 0.5, T 4, γ 2, 40 epochs, 2026-10-23:
+
+| init | | where | validation macro-F1 | test macro-F1 |
+|---|---|---|---|---|
+| wrennet | with BirdNET | macOS arm64 (mps) | 0.725 | 0.587 |
+| wrennet | with BirdNET | Docker (CPU, CI) | 0.727 | 0.787 |
+| wrennet | without | macOS arm64 (mps) | 0.749 | 0.801 |
+| scratch | with BirdNET | macOS arm64 (mps) | 0.384 | 0.409 |
+| scratch | without | macOS arm64 (mps) | 0.487 | 0.413 |
+
+No conclusion can be drawn from these. The same project with BirdNET gave test macro-F1 0.587 on one computer and 0.787
+on another (training is not byte-reproducible across computers): the run-to-run spread is as large as the difference
+with and without BirdNET. The test set is too small (74 windows, mostly background, 4–8 per species), the clips come
+from the calibration bundle, α and T were not tuned, and with `init: wrennet` the starting model was already trained
+with BirdNET as teacher on these species. BirdNET named the folder's species on 88 % of the species training windows.
+A meaningful comparison needs a larger labelled test set (specs/006-bird-accuracy-remeasure) and several seeds.
 
 ## Layout
 

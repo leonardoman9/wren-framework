@@ -36,11 +36,23 @@ jobs:
       - name: Unit checks
         run: >
           docker run --rm --entrypoint sh wren -c
-          ".venv-torch/bin/python tests/test_training.py && .venv-torch/bin/python -m pytest -q tests/test_setup.py tests/test_examples.py tests/test_stage_keys.py tests/test_layout.py"
+          ".venv-torch/bin/python tests/test_training.py && .venv-torch/bin/python -m pytest -q tests/test_setup.py tests/test_examples.py tests/test_stage_keys.py tests/test_layout.py tests/test_birdnet.py"
       - name: Synthetic end to end
         run: >
           docker run --rm -v "$PWD/runs:/wren/runs" --entrypoint sh wren -c
           ".venv-torch/bin/python tests/make_synthetic_dataset.py runs/synth_data && .venv-torch/bin/python -m wren run tests/synthetic/project.yaml"
+      - name: Learning from BirdNET refused for sounds that are not birds
+        run: >
+          docker run --rm -v "$PWD/runs:/wren/runs" --entrypoint sh wren -c
+          "! .venv-torch/bin/python -m wren run tests/synthetic/project_birdnet.yaml > runs/refusal.txt 2>&1
+          && cat runs/refusal.txt && grep -q \"'downsweep', 'trill', 'upsweep'\" runs/refusal.txt"
+      - name: Learning from BirdNET end to end, then again without BirdNET from the stored results
+        run: >
+          docker run --rm -v "$PWD/runs:/wren/runs" --entrypoint sh wren -c
+          ".venv-torch/bin/python tests/make_bird_dataset.py runs/bird_data
+          && .venv-torch/bin/python -m wren run tests/birds_birdnet/project.yaml
+          && mv third_party/birdnet /tmp/birdnet
+          && .venv-torch/bin/python -m wren run tests/birds_birdnet/project.yaml --stages train --force"
       - name: Bird model reproduction (byte for byte, package and firmware)
         run: docker run --rm -v "$PWD/runs:/wren/runs" --entrypoint sh wren tests/test_birds_reproduction.sh
       - name: Bird conversion intermediates (to locate a byte difference between hosts)

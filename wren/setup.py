@@ -1,16 +1,23 @@
 """python -m wren setup: checks the machine, then installs the two Python environments (torch, TensorFlow) from the
 lock files and, with --tflm, fetches and builds TFLM with its pinned ARM compiler (specs/001-reproducible-from-zero,
-contracts/cli-setup.md). Standard library only: it runs on a bare Python before anything is installed.
+contracts/cli-setup.md); with --birdnet, fetches BirdNET for `training: birdnet: true` (specs/003-birdnet-distillation,
+contracts/setup-birdnet.md). Standard library only: it runs on a bare Python before anything is installed.
 
 Messages are for biologists (constitution I): what is missing and how to fix it, no component names. Versions and
 the output of every install step go to runs/_setup/logs/setup.log, and to `--check --verbose`."""
 import hashlib
+import json
 import os
 import platform
 import shutil
 import subprocess
 import sys
+import tempfile
+import urllib.request
+import zipfile
 from pathlib import Path
+
+from wren import birdnet
 
 ROOT = Path(__file__).resolve().parents[1]
 FW = ROOT / "audiomoth"
@@ -188,6 +195,36 @@ def install_tflm():
     (TFLM / ".wren-build").write_text(tflm_build_key() + "\n")
 
 
+def install_birdnet():
+    """BirdNET's model and species list from Zenodo, checked against their pinned hashes; the marker is written last, so a
+    failed or interrupted download leaves BirdNET 'missing', never half-installed."""
+    what = "Downloading BirdNET"
+    d = birdnet.DIR
+    d.mkdir(parents=True, exist_ok=True)
+    (d / birdnet.MARKER).unlink(missing_ok=True)
+    try:
+        with tempfile.TemporaryDirectory(dir=d) as tmp:
+            zf = Path(tmp) / "birdnet.zip"
+            with urllib.request.urlopen(birdnet.ZIP_URL, timeout=60) as r, open(zf, "wb") as f:
+                shutil.copyfileobj(r, f, 1 << 20)
+            if birdnet.sha256(zf) != birdnet.ZIP_SHA256:
+                raise Stop(f"{what} failed: the file that arrived is not the expected one. Please try again later.")
+            with zipfile.ZipFile(zf) as z:
+                for name in birdnet.FILES:
+                    (d / name).parent.mkdir(parents=True, exist_ok=True)
+                    (d / name).write_bytes(z.read(name))
+        for name, expected in birdnet.FILES.items():
+            if birdnet.sha256(d / name) != expected:
+                raise Stop(f"{what} failed: an unpacked file is not the expected one. Please try again later.")
+    except OSError as e:
+        for name in birdnet.FILES: (d / name).unlink(missing_ok=True)
+        raise Stop(f"{what} failed ({e}). Check the internet connection and run this again.")
+    except Stop:
+        for name in birdnet.FILES: (d / name).unlink(missing_ok=True)
+        raise
+    (d / birdnet.MARKER).write_text(json.dumps(birdnet.FILES))
+
+
 # ---------------------------------------------------------------- entry points
 
 def versions(plat):
@@ -231,11 +268,13 @@ def report(verbose=False):
         ready = False
     row("Analysis tools", ready, "run python -m wren setup")
     row("Firmware build tools", tflm_ready(), "run python -m wren setup --tflm")
+    rows.append("Learning from BirdNET (optional): " + ("ready" if birdnet.ready() else "not installed — only needed for "
+                                                         "training: birdnet: true; run python -m wren setup --birdnet"))
     print("\n".join(rows + (["", *versions(plat)] if verbose else [])))
     return 0 if ok else 1
 
 
-def main(tflm=False, check=False, verbose=False, python=None):
+def main(tflm=False, check=False, verbose=False, python=None, birdnet_too=False):
     if check:
         return report(verbose)
     try:
@@ -257,6 +296,18 @@ def main(tflm=False, check=False, verbose=False, python=None):
     if build:
         print("Preparing the firmware build tools (about 10 minutes the first time)…", flush=True)
         install_tflm()
+    if birdnet_too:
+        if birdnet.ready():
+            print("BirdNET: ready")
+        else:
+            print("Downloading BirdNET (about 77 MB, once)…", flush=True)
+            try:
+                install_birdnet()
+            except Stop as e:
+                print(e, file=sys.stderr)
+                return 1
+        print(f"BirdNET v2.4 ({birdnet.CITATION}) is licensed {birdnet.LICENCE}: non-commercial use. Models trained with it "
+              "as a teacher may fall under the same condition.")
     LOG.parent.mkdir(parents=True, exist_ok=True)
     with LOG.open("a") as log:
         log.write("\n".join(versions(plat)) + "\n")

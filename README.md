@@ -142,6 +142,10 @@ training:
   seed: 0
   device: auto                   # cuda, mps or cpu; auto picks the fastest available
   warmup_epochs: 2
+  birdnet: false                 # true: also learn from BirdNET (birds only; see "Learning from BirdNET" below)
+  birdnet_weight: 0.5            # with birdnet: how much BirdNET counts against your folders, 0-1
+  birdnet_temperature: 4         # with birdnet: how much BirdNET's opinion is softened (above 0)
+  birdnet_species: {}            # with birdnet: folder -> scientific name, e.g. {tawny_owl: Strix aluco}
 device:
   window_start: "05:30"          # daily recording window, device clock
   window_minutes: 10
@@ -152,6 +156,25 @@ device:
 Long recordings are fine. Each file's label is its folder, so `prepare` keeps only the moments where something
 stands out in that sound's frequency range. Wind or rain that every folder has does not count. Files where nothing
 stands out are listed in `runs/<name>/prepare/prepare.json`.
+
+### Learning from BirdNET (birds only)
+
+If your sounds are bird species, the model can learn from [BirdNET](https://birdnet.cornell.edu) as well as from your
+folders: BirdNET listens to every training recording, and the model learns both your folder's label and BirdNET's
+graded opinion (for example "80 % this species, 10 % that one"). This can help when you have few recordings.
+
+1. Install BirdNET once: `python -m wren setup --birdnet` (about 77 MB).
+2. Name each species folder after its scientific name (`Periparus_ater` or `Periparus ater`), or give the name under
+   `training: birdnet_species`. The background folder needs no name.
+3. Set `training: birdnet: true`.
+
+If a folder is not a species BirdNET knows, the run stops at once and names it. Where BirdNET hears none of your
+species in a moment of a species recording (a faint or distant call), only your label counts for that moment. The
+report says how often BirdNET named your folder's species. BirdNET's answers are kept in `runs/<name>/train/birdnet/`:
+a copy of the run folder can be trained again on a computer without BirdNET, as long as the recordings are the same.
+
+BirdNET v2.4 (Kahl et al. 2021, *Ecological Informatics* 61:101236) is licensed CC BY-NC 4.0, for non-commercial use;
+a model trained with it may fall under the same condition.
 
 To convert an already trained WrenNet model instead (as `examples/birds/project.yaml` does):
 
@@ -222,7 +245,9 @@ see [audiomoth/docs/FIRST_BOARD_TEST.md](audiomoth/docs/FIRST_BOARD_TEST.md).
   CC BY or CC BY-SA. Each clip keeps its licence. The recordist, licence and source of every clip are listed in
   `ATTRIBUTION.csv`.
 - **WrenNet** model code and the bird model (`wrennet/checkpoints/birds.pt`): `wrennet/`. WrenNet's original training
-  and distillation code is in its own repository, [sciapponi/WrenNet](https://github.com/sciapponi/WrenNet).
+  code is in its own repository, [sciapponi/WrenNet](https://github.com/sciapponi/WrenNet).
+- **BirdNET** (only with `training: birdnet: true`, downloaded by `python -m wren setup --birdnet`, never stored in this
+  repository): v2.4, CC BY-NC 4.0, Kahl et al. (2021).
 
 ## For developers
 

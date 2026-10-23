@@ -1,8 +1,9 @@
 """wren: from audio folders or a trained WrenNet checkpoint to AudioMoth firmware.
 
-  python -m wren setup [--tflm] [--check [--verbose]] [--python PATH]
+  python -m wren setup [--tflm] [--birdnet] [--check [--verbose]] [--python PATH]
                                          the two Python environments (torch, TensorFlow) and, with --tflm, the firmware
-                                         build tools (~10 minutes the first time); --check only reports what is ready
+                                         build tools (~10 minutes the first time); --birdnet: BirdNET, for
+                                         training: birdnet: true; --check only reports what is ready
   python -m wren run PROJECT.yaml [--stages export,package,firmware,report] [--force]
 
 Only the standard library is imported here: `setup` must work on a bare Python before anything is installed.
@@ -17,7 +18,8 @@ STAGES = ["prepare", "train", "evaluate", "export", "package", "firmware", "repo
 
 def setup(args):
     from wren import setup as wren_setup
-    sys.exit(wren_setup.main(tflm=args.tflm, check=args.check, verbose=args.verbose, python=args.python))
+    sys.exit(wren_setup.main(tflm=args.tflm, check=args.check, verbose=args.verbose, python=args.python,
+                             birdnet_too=args.birdnet))
 
 
 def run(args):
@@ -62,6 +64,7 @@ def main():
     sub = ap.add_subparsers(dest="cmd", required=True)
     s = sub.add_parser("setup", help="install what the pipeline needs, or check it (--check)")
     s.add_argument("--tflm", action="store_true", help="also fetch and build the firmware build tools (TFLM, compiler)")
+    s.add_argument("--birdnet", action="store_true", help="also fetch BirdNET (for training: birdnet: true; ~77 MB)")
     s.add_argument("--check", action="store_true", help="change nothing; report what is ready and what is missing")
     s.add_argument("--verbose", action="store_true", help="with --check: also show component names and versions")
     s.add_argument("--python", help="Python 3.11 interpreter for the environments")
