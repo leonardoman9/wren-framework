@@ -197,7 +197,8 @@ and power, the known limits and open points, the licences of every component and
 - **FR-015 — Code map and contributing** (technical part): which file does what (pipeline, torch side, tf side,
   firmware, tools, tests), how a feature is made in this repository (spec-kit: `specs/`, the constitution, spec → plan
   → tasks → implementation → pull request), the checks a pull request must pass, and how to update a byte-exact
-  reference (bird package, firmware hashes, accuracy) when a change is intended.
+  reference (bird package, firmware hashes, accuracy) when a change is intended; and the constitution's rule (v2.1.0) that from
+  this manual's first version on, every pull request updates the manual when it changes anything the manual describes.
 - **FR-009**: The user part MUST follow constitution I (no machine-learning or embedded jargon without an explanation
   in the glossary); the technical part may use technical terms.
 
