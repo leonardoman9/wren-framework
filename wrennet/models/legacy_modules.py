@@ -2,8 +2,6 @@ import torch
 import torch.ao.nn.quantized as nnq
 import torch.nn as nn
 import torch.nn.functional as F
-from torchsummary import summary
-from omegaconf import DictConfig
 
 class AttentionLayer(nn.Module):
     def __init__(self, hidden_size):
@@ -436,7 +434,7 @@ class EncoderSpec(nn.Module): # For Spectrograms
 
 
 class MatchboxNet(nn.Module):
-    def __init__(self, cfg: DictConfig): # Takes Hydra config for matchbox
+    def __init__(self, cfg): # Takes a dict-like config for matchbox (was a Hydra DictConfig)
         super(MatchboxNet, self).__init__()
         
         # Extract parameters from the Hydra config for MatchboxNet structure
@@ -563,7 +561,7 @@ class MatchboxNetSkip(nn.Module):
     This version is based on the second, more detailed MatchboxNetSkip from the provided text,
     designed to be configured via a Hydra DictConfig.
     """
-    def __init__(self, cfg: DictConfig):
+    def __init__(self, cfg):  # a dict-like config
         super(MatchboxNetSkip, self).__init__()
 
         matchbox_cfg = cfg # cfg is expected to be the 'matchbox' sub-config

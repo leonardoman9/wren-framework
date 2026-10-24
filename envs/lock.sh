@@ -14,6 +14,9 @@ for env in torch tf; do
     # macOS: the pinned torch has wheels for macOS 14+ only
     [ "$name" = macos-arm64 ] && export MACOSX_DEPLOYMENT_TARGET=14.0 || unset MACOSX_DEPLOYMENT_TARGET
     out=lock/$env-$name.txt
+    # start from the current lock: uv keeps the versions it finds in the output file, so a change to the .in moves
+    # only what it must (a fresh compile would move every unpinned dependency to its newest version)
+    [ -f "$out" ] && cp "$out" "$out.tmp"
     # shellcheck disable=SC2086
     uv pip compile requirements-$env.in --python-version 3.11 --python-platform "$triple" --generate-hashes \
       --no-header --quiet --emit-index-url $extra -o "$out.tmp"
