@@ -63,27 +63,73 @@ Direct test with real recordings from the project Drive (3 s windows, most-voted
 Certhia fam. 13/14 -> 1, Apus 20/23 -> 2, Certhia brach. 12/14 -> 3, Emberiza 13/23 -> 4, Lophophanes 10/14 -> 5,
 Periparus 19/24 -> 6, Poecile 17/24 -> 7: **8 species out of 8**, 76 % of windows correct. Fixed in `schedule.c` and in the tools.
 
-## 9. Accuracy on the real species (data from the project Drive)
-> **Measured on the previous package**, which was calibrated on different audio. The current package keeps the same
-> float weights, but its int8 ranges and test vector come from `examples/birds/calibration/`. These figures have not
-> been re-measured for it (out of scope of specs/001-reproducible-from-zero).
+## 9. Accuracy of the shipped model (re-measured 23 October 2026)
 
-161 windows of 3 s (the 2 loudest per file, 7–12 files per species), all 8 species.
+`python tools/measure_bird_accuracy.py` reproduces every figure here from the committed test bundle
+`examples/birds/test/` (`accuracy.json`; byte for byte in the Docker image, `tests/test_bird_accuracy.sh` in CI;
+specs/006-bird-accuracy-remeasure). It measures the package that ships (`model/bird_backbone_int8.tflite`, with the int8
+ranges of `examples/birds/calibration/`) through the firmware's own C front-end and tail.
+On a native install the same command gives the same picture with small differences (one call window of 637 can
+cross prepare's selection threshold, and the C code is built by another compiler): the headline figures agree within
+0.02; per-class figures of the small classes can move more.
 
-| | accuracy |
-|---|---|
-| PyTorch float, clean audio | 76.4 % |
-| device pipeline (C front-end + int8 backbone + C tail), clean audio | 75.8 % |
-| PyTorch float, simulated analogue chain at 70 / 60 / 50 dB SPL | 73.3 % / 73.9 % / 73.3 % |
-| device pipeline, simulated chain at 70 / 60 / 50 dB SPL | 75.8 % / 75.8 % / 75.2 % |
+**Test audio.** 637 windows of 3 s from 99 recordings, all freely licensed, no BioDCASE:
+- the 8 species: every CC0 / CC BY / CC BY-SA xeno-canto recording, without the stretches the calibration bundle took
+  from it (each calibration clip ± 1.5 s), at most 120 s per recording; windows chosen by the pipeline's own
+  call-finding (`prepare`), not by loudness;
+- non-bird: 38 CC0 Freesound field recordings (wind, rain, stream, river, insects,
+  traffic, footsteps, forest ambience), 30 s each, kept only if BirdNET hears no species in them.
 
-Per class (float, clean): Bubo 0.79; Certhia fam. 0.93; Apus 0.87; Certhia brach. 0.86; Emberiza 0.54; Lophophanes 0.71;
-Periparus 0.79; Poecile 0.71. Reading: int8 + C cost < 1 point; the simulated analogue chain costs ~2–3 points on the float
-model and almost nothing on the int8 pipeline.
-**Limits:** small sample (±3–4 points), windows picked by energy rather than with the training's call extraction, no non-bird
-windows, and the Drive files are probably also training files (absolute accuracy is optimistic; the relative comparison is
-what counts). Scripts: `tools/bird_eval_prepare.py` + `tools/bird_eval_pipeline.py`; Xeno-canto download: `tools/xc_fetch.py`
-(API key). These are in the WrenNet repository.
+Intervals: 95 %, bootstrap over recordings (the windows of a recording move together), 2,000 resamples.
+
+| | original model (PyTorch, float) | device (C front-end + int8 backbone + C tail) |
+|---|---|---|
+| accuracy, all windows | 40.0 % (31.6–48.7) | 44.3 % (35.4–53.4) |
+| macro-F1, 9 classes | 54.7 % (44.9–62.1) | 54.9 % (45.0–63.1) |
+| non-bird windows called a species | 84.8 % (75.4–92.5) | 75.4 % (63.1–86.7) |
+| ... with confidence ≥ 50 % | 53.8 % | 48.8 % |
+| species recordings uploaded after 2025-06-11 (certainly unseen in training): accuracy | 72.5 % (52.9–90.9) | 70.6 % (51.3–89.6) |
+
+Device − original, macro-F1: +0.2 points (-1.9 to +2.4): the int8 conversion and the C
+code cost nothing measurable.
+
+| class | recordings | windows | recall (device) | precision (device) |
+|---|---|---|---|---|
+| Apus apus (fewer than 5 recordings: not meaningful) | 4 | 9 | 100.0 % | 52.9 % |
+| Bubo bubo | 9 | 46 | 82.6 % | 13.2 % |
+| Certhia brachydactyla | 10 | 80 | 56.2 % | 88.2 % |
+| Certhia familiaris | 6 | 21 | 66.7 % | 34.2 % |
+| Emberiza cia (fewer than 5 recordings: not meaningful) | 4 | 9 | 55.6 % | 62.5 % |
+| Lophophanes cristatus | 9 | 38 | 55.3 % | 95.5 % |
+| Periparus ater | 15 | 73 | 71.2 % | 65.0 % |
+| Poecile montanus (fewer than 5 recordings: not meaningful) | 4 | 19 | 73.7 % | 41.2 % |
+| non-bird | 38 | 342 | 24.6 % | 88.4 % |
+
+**Reading.**
+- **On bird calls the model works**: on the 15 species recordings it cannot have seen in training,
+  71 % of the call windows get the right species on the device.
+- **False detections are the main limit**: 75 % of the windows without any bird are called a species,
+  49 % with confidence ≥ 50 %. Of the 342 non-bird windows, 239 are called *Bubo bubo*: wind, rain,
+  rivers and traffic carry most of their energy at the eagle owl's low frequencies (300–400 Hz). It is not a level
+  effect (median −37 dBFS for both). A device at a windy or noisy site would report eagle owls often, which is also
+  why the precision of *Bubo bubo* is low. The model's "non-bird" class was trained on other kinds of background: a
+  project should train with background recorded at its own sites.
+- Accuracy over all windows is dominated by the non-bird windows (more than half of the set); macro-F1 weighs the
+  classes equally.
+
+**Limits.**
+- WrenNet was trained on xeno-canto audio: overlap with the test recordings cannot be excluded, except for the
+  15 recordings uploaded after 2025-06-11 (WrenNet's checkpoint was first committed then).
+- The species windows come from the same recordings as the calibration clips, at other times.
+- *Apus apus*, *Emberiza cia* and *Poecile montanus* have fewer than 5 free recordings: their figures are not
+  meaningful. Only about 1 % of xeno-canto is freely licensed.
+- Archive recordings, not AudioMoth field audio; no long unattended recordings.
+- The non-bird set is 38 sounds of eight kinds; a site's own background will differ.
+
+**Replaced.** The previous §9 (21 October 2026: float 76.4 %, device 75.8 % on 161 species windows from Drive files
+that were probably training files, picked by loudness, no non-bird windows) was measured on the package before
+feature 001's recalibration, with scripts that live in the WrenNet repository. Its simulated analogue-chain rows
+(70/60/50 dB SPL) came from WrenNet scripts that are not in this repository and were not re-measured.
 
 ## 10. On-device test modes
 `REPLAY.PCM` ("RPLY" + 96,000 int16 samples + "END!") on the SD card: the device classifies it and writes

@@ -1,8 +1,9 @@
 """The device pipeline on the computer (C front-end + int8 TFLite backbone + C tail, the firmware's own C code) on
 labelled windows, against the float model (TensorFlow environment).
-Usage: python -m wren.tfside.device_eval REF.npz MODEL.tflite LIBFE LIBTAIL K OUT.json
+Usage: python -m wren.tfside.device_eval REF.npz MODEL.tflite LIBFE LIBTAIL K OUT.json [WINDOWS.npz]
 REF.npz: pcm, logits (PyTorch), labels (wren/torchside/windows_ref.py). Reports accuracy and macro-F1 for float and
-int8 and the class agreement between them; the package stage gates on the macro-F1 drop."""
+int8 and the class agreement between them; the package stage gates on the macro-F1 drop. WINDOWS.npz (optional): the
+per-window labels, float and int8 logits, for the bird accuracy measurement (specs/006-bird-accuracy-remeasure)."""
 import ctypes
 import json
 import sys
@@ -60,4 +61,5 @@ res = {"windows": int(len(y)), "float_accuracy": float((lf.argmax(1) == y).mean(
        "float_macro_f1": macro(lf.argmax(1)), "int8_macro_f1": macro(got.argmax(1)),
        "class_agreement": float((lf.argmax(1) == got.argmax(1)).mean()), "logits_max_diff": float(np.abs(got - lf).max())}
 open(out, "w").write(json.dumps(res, indent=2) + "\n")
+if len(sys.argv) > 7: np.savez(sys.argv[7], labels=y, float_logits=lf, int8_logits=got)
 print(json.dumps(res))

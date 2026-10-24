@@ -228,14 +228,16 @@ see [audiomoth/docs/FIRST_BOARD_TEST.md](audiomoth/docs/FIRST_BOARD_TEST.md).
 | run | data | test macro-F1, call windows (original → device version) |
 |---|---|---|
 | `tests/synthetic` | 3 synthetic tonal "species" + background, trained from scratch | 1.000 → 1.000; firmware built and tested |
+| the shipped bird model | freely licensed test set (`examples/birds/test/`): 8 species from xeno-canto, sounds without birds from Freesound | 0.547 → 0.549; species recordings never seen in training: 71 % right; 75 % of windows without birds called a species |
 
 **Limits:**
 - No real-species training data has been measured yet.
 - No long field recordings from an AudioMoth have been used yet. The selection of moments in long files is tested
   on synthetic data only (`tests/test_training.py`).
 - False reports per hour need hours of background recordings from the deployment sites.
-- The accuracy of the shipped bird model in `audiomoth/docs/VERIFICATION.md` §9 was measured on a previous
-  version, made from different calibration audio, and has not been re-measured.
+- The shipped bird model calls most windows of wind, rain, rivers or traffic a species (mostly *Bubo bubo*): train
+  your own project with background recorded at your sites. Details, intervals and limits:
+  `audiomoth/docs/VERIFICATION.md` §9, reproduced by `python tools/measure_bird_accuracy.py`.
 
 ## Licences and credits
 

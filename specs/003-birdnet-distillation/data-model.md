@@ -51,7 +51,7 @@ BirdNET sha256 (research R8) — no paths or times, so the key is the same on an
 ## Training target (in `train.py`, not stored)
 
 For a drawn window (training file fi, its source sha256 h, drawn start s): the row with file h and the start nearest
-to s → c (S values) → p = [c…, Π(1 − c)] (background last; without background p = c) → floor 1e-4 → normalise →
+to s → c (S values) → p = [c…, Π(1 − c)] (background last; without background p = c) → floor 1e-9 → normalise →
 q = p^(1/T), normalised. Mask m = 0 when the folder label is a species and max(c) < 0.1, else 1 (research R6). Classes are
 in the order of `classes` (background last, as prepare orders them).
 

@@ -26,7 +26,7 @@ sleeps (EM4). It does not use USB, GPS or the configuration app.
 | Internal RAM | .data 192 B + .bss 16,160 B, stack ~2.7 KB |
 | External SRAM | 258,512 B of 262,144 (96 KiB TFLM arena, front-end, 1.5 s recording ring) |
 | Model | int8 backbone 94.7 KB, 151 operators; tail (GRU 64) in C with int8 weights |
-| Accuracy (8 species, 161 windows) | float 76.4 %, device pipeline 75.8 % |
+| Accuracy (637 windows, freely licensed test set) | species recordings never seen in training: 71 % right on the device; 75 % of windows without birds called a species, mostly *Bubo bubo* (VERIFICATION §9) |
 
 Classes, in logit order: Bubo bubo, Certhia familiaris, Apus apus, Certhia brachydactyla, Emberiza cia,
 Lophophanes cristatus, Periparus ater, Poecile montanus, non-bird.
