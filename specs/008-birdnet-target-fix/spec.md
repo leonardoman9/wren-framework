@@ -33,8 +33,9 @@ on two computers. Feature 006 now provides a larger, freely licensed labelled se
   The experiment also runs the 003 target, to show what the correction changes.
 - Q: Which data for the comparison, given that the 006 test bundle uses every freely licensed recording of the 8
   species (so no other free recordings are left to train on)? → A: Cross-validation by recording on the 006 bundle:
-  the recordings are split into 5 folds (each recording, with all its windows, in one fold; species and non-bird
-  sounds alike); each variant is trained on 4 folds and tested on the fifth, 5 times. No recording is ever in both
+  the recordings are split into 4 folds (each recording, with all its windows, in one fold; species and non-bird
+  sounds alike); each variant is trained on 3 folds and tested on the fourth, 4 times (4, not 5: the
+  species with the fewest free recordings have 4, and every test fold must contain every class). No recording is ever in both
   training and test.
 
 ## User Scenarios & Testing *(mandatory)*
@@ -98,7 +99,7 @@ documentation states the conclusion it supports, including "no difference" if th
   BirdNET's part MUST be skipped (as in 003).
 - **FR-002**: On a background window the target MUST be as in feature 003.
 - **FR-003**: Unit tests MUST cover FR-001 and FR-002 (the scenario of US1, the skip, the background window).
-- **FR-004**: A comparison command MUST train, on 5 recording-level folds of the 006 test bundle and 3 seeds each,
+- **FR-004**: A comparison command MUST train, on 4 recording-level folds of the 006 test bundle and 3 seeds each,
   these variants: without BirdNET; with BirdNET (new target) at weight 0.5 and 0.25; with BirdNET (003 target) at
   0.5; each from scratch and from WrenNet; and MUST report per variant the test macro-F1 and the false-detection rate
   (device's threshold) with 95 % intervals over folds × seeds, and the paired difference to "without BirdNET".
@@ -118,7 +119,7 @@ documentation states the conclusion it supports, including "no difference" if th
 
 - **SC-001**: On `tests/birds_birdnet`, "target's top class = folder" is at least 90 % for every species whose windows
   BirdNET hears above 0.1 (it was 50–100 %).
-- **SC-002**: The comparison covers 8 variants × 5 folds × 3 seeds = 120 trainings, each with its result recorded.
+- **SC-002**: The comparison covers 8 variants × 4 folds × 3 seeds = 96 trainings, each with its result recorded.
 - **SC-003**: Every difference the documentation calls an improvement or a loss has a 95 % interval excluding zero;
   otherwise it is reported as "no measurable difference".
 - **SC-004**: Option off: training identical to before (FR-006).
@@ -127,6 +128,6 @@ documentation states the conclusion it supports, including "no difference" if th
 
 - Feature 006 (the test bundle) is merged first; feature 009 (training experiments) may later run this comparison with
   its own tooling, but this feature does not depend on it.
-- 120 short trainings fit in a few hours on a laptop (about 1 minute each measured for these data sizes); the
+- 96 short trainings fit in a few hours on a laptop (about 1 minute each measured for these data sizes); the
   comparison runs on demand, not in CI. CI runs the unit tests.
 - Folds are fixed by a seed and recorded, so the comparison can be rerun on the same split.

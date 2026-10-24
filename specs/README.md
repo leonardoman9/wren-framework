@@ -11,7 +11,7 @@ project constitution (`.specify/memory/constitution.md`).
 | 004 Stages re-run when the model code changes | merged | #6 |
 | 006 Re-measure the bird model's accuracy | merged | #7 |
 | 005 Drop unused packages from the torch environment | planned (spec, plan, tasks) | — |
-| 008 Fix the BirdNET target and measure whether it helps | specified | — |
+| 008 Fix the BirdNET target and measure whether it helps | planned (spec, plan, tasks) | — |
 | 009 Training experiments, then deploy the best | specified | — |
 | 007 The wren-framework manual | specified; last, it describes the result of all the others | — |
 
