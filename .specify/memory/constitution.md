@@ -110,4 +110,12 @@ conversation logs. Amendments require:
 All pull requests MUST be checked against the principles above. A PR that violates a principle
 MUST either fix the violation or propose a constitution amendment in the same PR.
 
-**Version**: 2.0.0 | **Ratified**: 2026-10-22 | **Last Amended**: 2026-10-22
+**The manual stays true.** Once the manual exists (from the merge of feature 007, its first
+version, onwards), every pull request that changes anything the manual describes — behaviour,
+options and parameters, outputs, figures, architecture, commands — MUST update the manual in the
+same pull request. A pull request that changes nothing the manual describes MUST say so in its
+description. Before the manual exists this rule does not apply.
+Rationale: the manual is the reference for biologists, developers and reviewers (principles I and
+VI); a manual that lags behind the code misleads exactly the people it is written for.
+
+**Version**: 2.1.0 | **Ratified**: 2026-10-22 | **Last Amended**: 2026-10-24
